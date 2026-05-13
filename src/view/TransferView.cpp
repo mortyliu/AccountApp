@@ -4,12 +4,14 @@
 #include <QMessageBox>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
+#include <QGridLayout>
 #include <QLabel>
 #include <QComboBox>
 #include <QLineEdit>
 #include <QDateEdit>
 #include <QPushButton>
 #include <QSqlQuery>
+#include <QFrame>
 
 TransferView::TransferView(QWidget* parent) : QWidget(parent) {
     setupUI();
@@ -20,38 +22,67 @@ TransferView::~TransferView() {}
 
 void TransferView::setupUI() {
     QVBoxLayout* mainLayout = new QVBoxLayout(this);
+    mainLayout->setContentsMargins(0, 0, 0, 0);
+    mainLayout->setSpacing(12);
 
-    QHBoxLayout* inputLayout = new QHBoxLayout();
+    QFrame* transferCard = new QFrame();
+    transferCard->setObjectName("cardFrame");
+    QVBoxLayout* cardLayout = new QVBoxLayout(transferCard);
+    cardLayout->setContentsMargins(24, 20, 24, 24);
+    cardLayout->setSpacing(16);
 
+    QLabel* sectionLabel = new QLabel(QStringLiteral("账户转账"));
+    sectionLabel->setObjectName("sectionLabel");
+
+    QGridLayout* formLayout = new QGridLayout();
+    formLayout->setSpacing(12);
+    formLayout->setColumnMinimumWidth(0, 80);
+
+    QLabel* fromLabel = new QLabel(QStringLiteral("转出账户"));
     m_fromAccountCombo = new QComboBox();
-    m_toAccountCombo = new QComboBox();
+    m_fromAccountCombo->setMinimumWidth(200);
 
+    QLabel* toLabel = new QLabel(QStringLiteral("转入账户"));
+    m_toAccountCombo = new QComboBox();
+    m_toAccountCombo->setMinimumWidth(200);
+
+    QLabel* amountLabel = new QLabel(QStringLiteral("转账金额"));
     m_amountEdit = new QLineEdit();
-    m_amountEdit->setPlaceholderText(QString::fromUtf8("金额"));
+    m_amountEdit->setPlaceholderText(QStringLiteral("请输入金额"));
     m_amountEdit->setValidator(new QDoubleValidator(0.01, 9999999.99, 2, this));
 
+    QLabel* dateLabel = new QLabel(QStringLiteral("转账日期"));
     m_dateEdit = new QDateEdit(QDate::currentDate());
     m_dateEdit->setDisplayFormat("yyyy-MM-dd");
     m_dateEdit->setCalendarPopup(true);
 
+    QLabel* noteLabel = new QLabel(QStringLiteral("备注"));
     m_noteEdit = new QLineEdit();
-    m_noteEdit->setPlaceholderText(QString::fromUtf8("备注"));
+    m_noteEdit->setPlaceholderText(QStringLiteral("可选备注"));
 
-    m_transferBtn = new QPushButton(QString::fromUtf8("确认转账"));
+    formLayout->addWidget(fromLabel, 0, 0);
+    formLayout->addWidget(m_fromAccountCombo, 0, 1);
+    formLayout->addWidget(toLabel, 1, 0);
+    formLayout->addWidget(m_toAccountCombo, 1, 1);
+    formLayout->addWidget(amountLabel, 2, 0);
+    formLayout->addWidget(m_amountEdit, 2, 1);
+    formLayout->addWidget(dateLabel, 3, 0);
+    formLayout->addWidget(m_dateEdit, 3, 1);
+    formLayout->addWidget(noteLabel, 4, 0);
+    formLayout->addWidget(m_noteEdit, 4, 1);
 
-    inputLayout->addWidget(new QLabel(QString::fromUtf8("账户1:")));
-    inputLayout->addWidget(m_fromAccountCombo);
-    inputLayout->addWidget(new QLabel(QString::fromUtf8("→")));
-    inputLayout->addWidget(new QLabel(QString::fromUtf8("账户2:")));
-    inputLayout->addWidget(m_toAccountCombo);
-    inputLayout->addWidget(m_amountEdit);
-    inputLayout->addWidget(m_dateEdit);
-    inputLayout->addWidget(m_noteEdit);
-    inputLayout->addWidget(m_transferBtn);
+    m_transferBtn = new QPushButton(QStringLiteral("确认转账"));
+    m_transferBtn->setMinimumHeight(40);
 
-    mainLayout->addLayout(inputLayout);
+    cardLayout->addWidget(sectionLabel);
+    cardLayout->addLayout(formLayout);
+    cardLayout->addSpacing(8);
+    cardLayout->addWidget(m_transferBtn, 0, Qt::AlignLeft);
 
-    setLayout(mainLayout);
+    mainLayout->addWidget(transferCard);
+    mainLayout->addStretch();
+
+    connect(m_transferBtn, &QPushButton::clicked, this, &TransferView::onTransferClicked);
 }
 
 void TransferView::loadAccounts() {
@@ -71,7 +102,7 @@ void TransferView::onTransferClicked() {
     bool ok;
     double amount = m_amountEdit->text().toDouble(&ok);
     if (!ok || amount <= 0) {
-        QMessageBox::warning(this, QString::fromUtf8("警告"), QString::fromUtf8("请输入有效的金额"));
+        QMessageBox::warning(this, QStringLiteral("警告"), QStringLiteral("请输入有效的金额"));
         return;
     }
 
@@ -79,22 +110,22 @@ void TransferView::onTransferClicked() {
     int toAccountId = m_toAccountCombo->currentData().toInt();
 
     if (fromAccountId == toAccountId) {
-        QMessageBox::warning(this, QString::fromUtf8("警告"), QString::fromUtf8("请选择不同的账户"));
+        QMessageBox::warning(this, QStringLiteral("警告"), QStringLiteral("请选择不同的账户"));
         return;
     }
 
     QString note = m_noteEdit->text().trimmed();
     if (note.isEmpty()) {
-        note = QString::fromUtf8("转账");
+        note = QStringLiteral("转账");
     }
 
     bool success = TransactionController::transfer(fromAccountId, toAccountId, amount, m_dateEdit->date(), note);
 
     if (success) {
-        QMessageBox::information(this, QString::fromUtf8("成功"), QString::fromUtf8("转账成功"));
+        QMessageBox::information(this, QStringLiteral("成功"), QStringLiteral("转账成功"));
         m_amountEdit->clear();
         m_noteEdit->clear();
     } else {
-        QMessageBox::warning(this, QString::fromUtf8("失败"), QString::fromUtf8("转账失败，转出账户余额不足"));
+        QMessageBox::warning(this, QStringLiteral("失败"), QStringLiteral("转账失败，转出账户余额不足"));
     }
 }

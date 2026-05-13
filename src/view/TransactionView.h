@@ -1,4 +1,4 @@
-﻿#ifndef TRANSACTIONVIEW_H
+#ifndef TRANSACTIONVIEW_H
 #define TRANSACTIONVIEW_H
 
 #include <QWidget>
@@ -7,6 +7,8 @@
 #include <QComboBox>
 #include <QDateEdit>
 #include <QPushButton>
+#include <QLabel>
+#include <QFrame>
 #include "../controller/TransactionController.h"
 #include "../model/CategoryModel.h"
 #include "../model/AccountModel.h"
@@ -18,6 +20,8 @@ public:
     explicit TransactionView(QWidget* parent = nullptr);
     ~TransactionView();
 
+    void refreshData();
+
 private slots:
     void onAddClicked();
     void onEditClicked();
@@ -26,24 +30,26 @@ private slots:
     void onClearFilterClicked();
     void onTableDoubleClicked(const QModelIndex& index);
     void onTypeChanged(int index);
+    void onImportClicked();
 
 private:
     void setupUI();
     void updateCategoryCombo(int type);
+    void updateSummary();
 
     TransactionController m_controller;
     CategoryModel* m_categoryModel;
     AccountModel* m_accountModel;
 
     QTableView* m_tableView;
-    
+
     QComboBox* m_typeCombo;
     QComboBox* m_categoryCombo;
     QComboBox* m_accountCombo;
     QLineEdit* m_amountEdit;
     QDateEdit* m_dateEdit;
     QLineEdit* m_noteEdit;
-    
+
     QComboBox* m_filterCategoryCombo;
     QComboBox* m_filterAccountCombo;
     QDateEdit* m_filterStartDate;
@@ -54,6 +60,11 @@ private:
     QPushButton* m_deleteBtn;
     QPushButton* m_filterBtn;
     QPushButton* m_clearFilterBtn;
+    QPushButton* m_importBtn;
+
+    QLabel* m_incomeLabel;
+    QLabel* m_expenseLabel;
+    QLabel* m_balanceLabel;
 
     int m_editId;
 };

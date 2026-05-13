@@ -11,6 +11,7 @@ if (NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(Qt6_DIR "D:/Software/QT/6.11.0/mingw_64/lib/cmake/Qt6")
+set(QT_FORCE_ANY_CMAKE_VERSION_FOR_USING_QT TRUE)
 find_package(Qt6 REQUIRED COMPONENTS Widgets Charts Sql)
 qt_standard_project_setup()
 

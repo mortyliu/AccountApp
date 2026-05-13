@@ -2,9 +2,10 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include <QTabWidget>
-#include <QMenuBar>
-#include <QAction>
+#include <QStackedWidget>
+#include <QPushButton>
+#include <QLabel>
+#include <QList>
 #include "../view/CategoryView.h"
 #include "../view/AccountView.h"
 #include "../view/TransactionView.h"
@@ -18,6 +19,7 @@ public:
     ~MainWindow();
 
 private slots:
+    void onNavClicked(int index);
     void onExportData();
     void onImportData();
     void onAbout();
@@ -25,13 +27,19 @@ private slots:
 private:
     void setupUI();
     void setupMenu();
+    void setupSidebar();
+    QPushButton* createNavButton(const QString& text, int index);
 
-    QTabWidget* m_tabWidget;
+    QStackedWidget* m_stackedWidget;
+    QList<QPushButton*> m_navButtons;
+
     CategoryView* m_categoryView;
     AccountView* m_accountView;
     TransactionView* m_transactionView;
     TransferView* m_transferView;
     StatisticsView* m_statisticsView;
+
+    QLabel* m_pageTitle;
 };
 
 #endif // MAINWINDOW_H
