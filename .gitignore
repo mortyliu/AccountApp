@@ -112,3 +112,5 @@ qt_*.qm
 # .vsidx
 *.vsidx
 .vs/
+
+*.csv
