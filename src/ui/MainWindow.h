@@ -1,4 +1,4 @@
-﻿#ifndef MAINWINDOW_H
+#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QMainWindow>
@@ -9,6 +9,7 @@
 #include "../view/AccountView.h"
 #include "../view/TransactionView.h"
 #include "../view/StatisticsView.h"
+#include "../view/TransferView.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -29,6 +30,7 @@ private:
     CategoryView* m_categoryView;
     AccountView* m_accountView;
     TransactionView* m_transactionView;
+    TransferView* m_transferView;
     StatisticsView* m_statisticsView;
 };
 

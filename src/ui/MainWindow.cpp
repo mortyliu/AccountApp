@@ -3,6 +3,7 @@
 #include "../view/CategoryView.h"
 #include "../view/AccountView.h"
 #include "../view/StatisticsView.h"
+#include "../view/TransferView.h"
 #include "../utils/CsvExporter.h"
 #include <QApplication>
 #include <QMenuBar>
@@ -14,7 +15,7 @@
 
 MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     if (!DatabaseManager::instance().openDatabase()) {
-        QMessageBox::critical(nullptr, QString::fromUtf8("´íÎó"), QString::fromUtf8("ÎŞ·¨´ò¿ªÊı¾İ¿â"));
+        QMessageBox::critical(nullptr, QStringLiteral("é”™è¯¯"), QStringLiteral("æ— æ³•æ‰“å¼€æ•°æ®åº“"));
         QApplication::exit(1);
     }
 
@@ -23,7 +24,7 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
 }
 
 void MainWindow::setupUI() {
-    setWindowTitle(QString::fromUtf8("¼ÇÕËÈí¼ş"));
+    setWindowTitle(QStringLiteral("è®°è´¦è½¯ä»¶"));
     setMinimumSize(800, 600);
 
     m_tabWidget = new QTabWidget(this);
@@ -31,12 +32,14 @@ void MainWindow::setupUI() {
     m_transactionView = new TransactionView();
     m_categoryView = new CategoryView();
     m_accountView = new AccountView();
+    m_transferView = new TransferView();
     m_statisticsView = new StatisticsView();
 
-    m_tabWidget->addTab(m_transactionView, QString::fromUtf8("ÊÕÖ§¼ÇÂ¼"));
-    m_tabWidget->addTab(m_categoryView, QString::fromUtf8("·ÖÀà¹ÜÀí"));
-    m_tabWidget->addTab(m_accountView, QString::fromUtf8("ÕË»§¹ÜÀí"));
-    m_tabWidget->addTab(m_statisticsView, QString::fromUtf8("Í³¼Æ·ÖÎö"));
+    m_tabWidget->addTab(m_transactionView, QStringLiteral("æ”¶æ”¯è®°å½•"));
+    m_tabWidget->addTab(m_categoryView, QStringLiteral("åˆ†ç±»ç®¡ç†"));
+    m_tabWidget->addTab(m_accountView, QStringLiteral("è´¦æˆ·ç®¡ç†"));
+    m_tabWidget->addTab(m_transferView, QStringLiteral("è´¦æˆ·è½¬è´¦"));
+    m_tabWidget->addTab(m_statisticsView, QStringLiteral("ç»Ÿè®¡åˆ†æ"));
 
     setCentralWidget(m_tabWidget);
 }
@@ -45,16 +48,16 @@ void MainWindow::setupMenu() {
     QMenuBar* menuBar = new QMenuBar(this);
     setMenuBar(menuBar);
 
-    QMenu* fileMenu = menuBar->addMenu(QString::fromUtf8("ÎÄ¼ş"));
+    QMenu* fileMenu = menuBar->addMenu(QStringLiteral("æ–‡ä»¶"));
     
-    QAction* exportAction = new QAction(QString::fromUtf8("µ¼³öÊı¾İ"), this);
-    QAction* importAction = new QAction(QString::fromUtf8("µ¼ÈëÊı¾İ"), this);
+    QAction* exportAction = new QAction(QStringLiteral("å¯¼å‡ºæ•°æ®"), this);
+    QAction* importAction = new QAction(QStringLiteral("å¯¼å…¥æ•°æ®"), this);
     
     fileMenu->addAction(exportAction);
     fileMenu->addAction(importAction);
 
-    QMenu* helpMenu = menuBar->addMenu(QString::fromUtf8("°ïÖú"));
-    QAction* aboutAction = new QAction(QString::fromUtf8("¹ØÓÚ"), this);
+    QMenu* helpMenu = menuBar->addMenu(QStringLiteral("å¸®åŠ©"));
+    QAction* aboutAction = new QAction(QStringLiteral("å…³äº"), this);
     helpMenu->addAction(aboutAction);
 
     connect(exportAction, &QAction::triggered, this, &MainWindow::onExportData);
@@ -63,30 +66,29 @@ void MainWindow::setupMenu() {
 }
 
 void MainWindow::onExportData() {
-    QString filePath = QFileDialog::getSaveFileName(this, QString::fromUtf8("µ¼³öÊı¾İ"), "", QString::fromUtf8("CSVÎÄ¼ş (*.csv)"));
+    QString filePath = QFileDialog::getSaveFileName(this, QStringLiteral("å¯¼å‡ºæ•°æ®"), "", QStringLiteral("CSVæ–‡ä»¶ (*.csv)"));
     if (!filePath.isEmpty()) {
         if (CsvExporter::exportTransactions(filePath)) {
-            QMessageBox::information(this, QString::fromUtf8("³É¹¦"), QString::fromUtf8("Êı¾İµ¼³ö³É¹¦"));
+            QMessageBox::information(this, QStringLiteral("æˆåŠŸ"), QStringLiteral("æ•°æ®å¯¼å‡ºæˆåŠŸ"));
         } else {
-            QMessageBox::warning(this, QString::fromUtf8("Ê§°Ü"), QString::fromUtf8("Êı¾İµ¼³öÊ§°Ü"));
+            QMessageBox::warning(this, QStringLiteral("å¤±è´¥"), QStringLiteral("æ•°æ®å¯¼å‡ºå¤±è´¥"));
         }
     }
 }
 
 void MainWindow::onImportData() {
-    QString filePath = QFileDialog::getOpenFileName(this, QString::fromUtf8("µ¼ÈëÊı¾İ"), "", QString::fromUtf8("CSVÎÄ¼ş (*.csv)"));
+    QString filePath = QFileDialog::getOpenFileName(this, QStringLiteral("å¯¼å…¥æ•°æ®"), "", QStringLiteral("CSVæ–‡ä»¶ (*.csv)"));
     if (!filePath.isEmpty()) {
         if (CsvExporter::importTransactions(filePath)) {
-            QMessageBox::information(this, QString::fromUtf8("³É¹¦"), QString::fromUtf8("Êı¾İµ¼Èë³É¹¦"));
+            QMessageBox::information(this, QStringLiteral("æˆåŠŸ"), QStringLiteral("æ•°æ®å¯¼å…¥æˆåŠŸ"));
         } else {
-            QMessageBox::warning(this, QString::fromUtf8("Ê§°Ü"), QString::fromUtf8("Êı¾İµ¼ÈëÊ§°Ü"));
+            QMessageBox::warning(this, QStringLiteral("å¤±è´¥"), QStringLiteral("æ•°æ®å¯¼å…¥å¤±è´¥"));
         }
     }
 }
 
 void MainWindow::onAbout() {
-    QMessageBox::about(this, QString::fromUtf8("¹ØÓÚ"), QString::fromUtf8("¼ÇÕËÈí¼ş v1.0\n\nÒ»¿î¼ò½àµÄ¸öÈË¼ÇÕË¹¤¾ß£¬Ö§³ÖÊÕÖ§¼ÇÂ¼¡¢·ÖÀà¹ÜÀí¡¢Í³¼Æ·ÖÎöµÈ¹¦ÄÜ¡£"));
+    QMessageBox::about(this, QStringLiteral("å…³äº"), QStringLiteral("è®°è´¦è½¯ä»¶ v1.0\n\nä¸€æ¬¾ç®€æ´çš„ä¸ªäººè®°è´¦å·¥å…·ï¼Œæ”¯æŒæ”¶æ”¯è®°å½•ã€åˆ†ç±»ç®¡ç†ã€ç»Ÿè®¡åˆ†æç­‰åŠŸèƒ½ã€‚"));
 }
 
 MainWindow::~MainWindow() {}
-

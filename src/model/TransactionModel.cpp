@@ -1,4 +1,4 @@
-#include "TransactionModel.h"
+﻿#include "TransactionModel.h"
 #include "DatabaseManager.h"
 
 TransactionModel::TransactionModel(QObject* parent) 

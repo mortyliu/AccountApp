@@ -1,8 +1,9 @@
-﻿#include "ui/MainWindow.h"
+#include "ui/MainWindow.h"
 #include <QApplication>
 #include <QStyleFactory>
 #include <QFile>
 #include <QLocale>
+#include <QIcon>
 #include <windows.h>
 
 int main(int argc, char *argv[]) {
@@ -25,6 +26,8 @@ int main(int argc, char *argv[]) {
         QString style = QString::fromUtf8(styleFile.readAll());
         app.setStyleSheet(style);
     }
+
+    app.setWindowIcon(QIcon(":/icons/app.svg"));
 
     MainWindow window;
     window.show();

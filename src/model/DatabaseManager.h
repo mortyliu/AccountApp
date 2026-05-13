@@ -1,4 +1,4 @@
-﻿#ifndef DATABASEMANAGER_H
+#ifndef DATABASEMANAGER_H
 #define DATABASEMANAGER_H
 
 #include <QSqlDatabase>
@@ -45,6 +45,9 @@ public:
     QSqlQuery getCategoryStatistics(const QDate& start, const QDate& end, int type);
     QSqlQuery getMonthlyStatistics(int year, int type);
     QSqlQuery getAccountBalance();
+    double getAccountBalance(int accountId);
+    bool updateAccountBalance(int accountId, double balance);
+    QSqlDatabase getDatabase();
 
 private:
     DatabaseManager();

@@ -1,4 +1,4 @@
-﻿#ifndef TRANSACTIONCONTROLLER_H
+#ifndef TRANSACTIONCONTROLLER_H
 #define TRANSACTIONCONTROLLER_H
 
 #include <QObject>
@@ -25,6 +25,9 @@ public:
 
     double getTotalIncome() const;
     double getTotalExpense() const;
+
+    static bool transfer(int fromAccountId, int toAccountId, double amount,
+                        const QDate& date, const QString& note = "");
 
 private:
     TransactionModel m_model;

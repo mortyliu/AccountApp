@@ -28,6 +28,7 @@ set(SOURCES
     src/view/AccountView.cpp
     src/view/TransactionView.cpp
     src/view/StatisticsView.cpp
+    src/view/TransferView.cpp
     src/ui/MainWindow.cpp
     src/utils/CsvExporter.cpp
 )
@@ -45,6 +46,7 @@ set(HEADERS
     src/view/AccountView.h
     src/view/TransactionView.h
     src/view/StatisticsView.h
+    src/view/TransferView.h
     src/ui/MainWindow.h
     src/utils/CsvExporter.h
 )

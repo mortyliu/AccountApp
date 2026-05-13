@@ -1,4 +1,4 @@
-#include "CategoryModel.h"
+ï»¿#include "CategoryModel.h"
 #include "DatabaseManager.h"
 
 CategoryModel::CategoryModel(QObject* parent) : QAbstractTableModel(parent) {
@@ -29,7 +29,7 @@ QVariant CategoryModel::data(const QModelIndex& index, int role) const {
         case 1:
             return QVariant(category.name);
         case 2:
-            return QVariant(category.type == 1 ? QString::fromUtf8("ÊÕÈë") : QString::fromUtf8("Ö§³ö"));
+            return QVariant(category.type == 1 ? QString::fromUtf8("æ”¶å…¥") : QString::fromUtf8("æ”¯å‡º"));
         }
     }
 
@@ -42,9 +42,9 @@ QVariant CategoryModel::headerData(int section, Qt::Orientation orientation, int
         case 0:
             return QVariant(QString::fromUtf8("ID"));
         case 1:
-            return QVariant(QString::fromUtf8("Ãû³Æ"));
+            return QVariant(QString::fromUtf8("åç§°"));
         case 2:
-            return QVariant(QString::fromUtf8("ÀàĞÍ"));
+            return QVariant(QString::fromUtf8("ç±»å‹"));
         }
     }
     return QVariant();

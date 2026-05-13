@@ -1,4 +1,5 @@
-﻿#include "TransactionController.h"
+#include "TransactionController.h"
+#include "../model/DatabaseManager.h"
 
 TransactionController::TransactionController(QObject* parent) : QObject(parent) {}
 
@@ -46,4 +47,52 @@ double TransactionController::getTotalIncome() const {
 
 double TransactionController::getTotalExpense() const {
     return m_model.getTotalExpense();
+}
+
+bool TransactionController::transfer(int fromAccountId, int toAccountId, double amount,
+                                    const QDate& date, const QString& note) {
+    DatabaseManager& db = DatabaseManager::instance();
+    
+    double fromBalance = db.getAccountBalance(fromAccountId);
+    if (fromBalance < amount) {
+        return false;
+    }
+
+    QSqlDatabase database = db.getDatabase();
+    database.transaction();
+
+    bool success = true;
+
+    QSqlQuery query(database);
+    query.prepare("INSERT INTO transactions (category_id, account_id, amount, type, date, note) "
+                  "VALUES (?, ?, ?, ?, ?, ?)");
+    
+    query.addBindValue(0);
+    query.addBindValue(fromAccountId);
+    query.addBindValue(amount);
+    query.addBindValue(0);
+    query.addBindValue(date.toString("yyyy-MM-dd"));
+    QString fromNote = note.isEmpty() ? QStringLiteral("transfer_out") : note + QStringLiteral("_out");
+    query.addBindValue(fromNote);
+    success &= query.exec();
+
+    query.prepare("INSERT INTO transactions (category_id, account_id, amount, type, date, note) "
+                  "VALUES (?, ?, ?, ?, ?, ?)");
+    
+    query.addBindValue(0);
+    query.addBindValue(toAccountId);
+    query.addBindValue(amount);
+    query.addBindValue(1);
+    query.addBindValue(date.toString("yyyy-MM-dd"));
+    QString toNote = note.isEmpty() ? QStringLiteral("transfer_in") : note + QStringLiteral("_in");
+    query.addBindValue(toNote);
+    success &= query.exec();
+
+    if (success) {
+        database.commit();
+    } else {
+        database.rollback();
+    }
+
+    return success;
 }

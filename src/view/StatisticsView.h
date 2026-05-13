@@ -1,4 +1,4 @@
-#ifndef STATISTICSVIEW_H
+﻿#ifndef STATISTICSVIEW_H
 #define STATISTICSVIEW_H
 
 #include <QWidget>

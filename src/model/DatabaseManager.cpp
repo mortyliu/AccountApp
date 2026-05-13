@@ -301,3 +301,28 @@ QSqlQuery DatabaseManager::getAccountBalance() {
                              "LEFT JOIN categories c ON t.category_id = c.id "
                              "GROUP BY a.id, a.name");
 }
+
+double DatabaseManager::getAccountBalance(int accountId) {
+    QSqlQuery q;
+    q.prepare("SELECT COALESCE(SUM(CASE WHEN c.type = 1 THEN t.amount ELSE 0 END), 0) - "
+              "COALESCE(SUM(CASE WHEN c.type = 0 THEN t.amount ELSE 0 END), 0) as balance "
+              "FROM accounts a LEFT JOIN transactions t ON a.id = t.account_id "
+              "LEFT JOIN categories c ON t.category_id = c.id "
+              "WHERE a.id = :account_id");
+    q.bindValue(":account_id", accountId);
+    q.exec();
+    if (q.next()) {
+        return q.value(0).toDouble();
+    }
+    return 0.0;
+}
+
+bool DatabaseManager::updateAccountBalance(int accountId, double balance) {
+    Q_UNUSED(accountId);
+    Q_UNUSED(balance);
+    return true;
+}
+
+QSqlDatabase DatabaseManager::getDatabase() {
+    return m_database;
+}
