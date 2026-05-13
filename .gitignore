@@ -1,0 +1,114 @@
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Qt Creator generated files
+*.pro.user
+*.pro.user.*
+*.qbs.user
+*.qbs.user.*
+*.qmlproject.user
+*.qmlproject.user.*
+
+# Qt Build directory
+build/
+_build/
+build-*/
+
+# Qt MOC files
+moc_*.cpp
+moc_*.h
+
+# Qt UI files
+ui_*.h
+
+# Qt RCC files
+qrc_*.cpp
+
+# Qt QML cache
+*.qmlc
+*.jsc
+
+# Qt translation files
+*.qm
+
+# Qt plugins
+plugins/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# CMake files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# Code::Blocks generated files
+*.cbp
+*.layout
+
+# CLion/Visual Studio generated files
+.idea/
+.vscode/
+*.sln
+*.vcxproj
+*.vcxproj.filters
+*.suo
+
+# Application data directory
+data/
+
+# WindDeployQt generated files
+qt_*.qm
+
+
+# .vsidx
+*.vsidx
+.vs/
