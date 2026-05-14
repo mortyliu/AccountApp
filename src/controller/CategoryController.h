@@ -1,4 +1,4 @@
-﻿#ifndef CATEGORYCONTROLLER_H
+#ifndef CATEGORYCONTROLLER_H
 #define CATEGORYCONTROLLER_H
 
 #include <QObject>
@@ -11,8 +11,8 @@ public:
 
     CategoryModel* getModel();
 
-    bool addCategory(const QString& name, int type);
-    bool updateCategory(int id, const QString& name, int type);
+    bool addCategory(const QString& name, int type, int parentId = -1, const QString& icon = "");
+    bool updateCategory(int id, const QString& name, int type, int parentId = -1, const QString& icon = "");
     bool deleteCategory(int id);
     void refresh();
 

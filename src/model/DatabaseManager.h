@@ -21,11 +21,16 @@ public:
     QSqlQuery executeSelectQuery(const QString& query);
 
     bool createTables();
-    bool insertCategory(const QString& name, int type);
-    bool updateCategory(int id, const QString& name, int type);
+    bool migrateDatabase();
+    bool insertCategory(const QString& name, int type, int parentId = -1, const QString& icon = "");
+    bool updateCategory(int id, const QString& name, int type, int parentId = -1, const QString& icon = "");
+    int getCategoryIdByNameAndType(const QString& name, int type);
     bool deleteCategory(int id);
     QSqlQuery getAllCategories();
     QSqlQuery getCategoriesByType(int type);
+    QSqlQuery getSubCategories(int parentId);
+    bool hasSubCategories(int categoryId);
+    bool hasTransactions(int categoryId);
 
     bool insertAccount(const QString& name, const QString& icon = "");
     bool updateAccount(int id, const QString& name, const QString& icon);
@@ -48,6 +53,7 @@ public:
     double getAccountBalance(int accountId);
     bool updateAccountBalance(int accountId, double balance);
     QSqlDatabase getDatabase();
+    int getLastInsertId();
 
 private:
     DatabaseManager();

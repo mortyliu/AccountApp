@@ -1,4 +1,4 @@
-﻿#include "DatabaseManager.h"
+#include "DatabaseManager.h"
 #include <QStandardPaths>
 #include <QDir>
 
@@ -32,9 +32,11 @@ bool DatabaseManager::openDatabase() {
         return false;
     }
 
-    m_database.exec("PRAGMA encoding = 'UTF-8'");
+    QSqlQuery q;
+    q.exec("PRAGMA encoding = 'UTF-8'");
     
     createTables();
+    migrateDatabase();
     return true;
 }
 
@@ -64,7 +66,10 @@ bool DatabaseManager::createTables() {
         CREATE TABLE IF NOT EXISTS categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            type INTEGER NOT NULL
+            type INTEGER NOT NULL,
+            parent_id INTEGER DEFAULT NULL,
+            icon TEXT DEFAULT '',
+            FOREIGN KEY (parent_id) REFERENCES categories(id)
         )
     )";
 
@@ -100,14 +105,58 @@ bool DatabaseManager::createTables() {
         insertCategory(QString::fromUtf8("奖金"), 1);
         insertCategory(QString::fromUtf8("投资收益"), 1);
         insertCategory(QString::fromUtf8("其他收入"), 1);
+
+        int catId = 0;
+
         insertCategory(QString::fromUtf8("餐饮"), 0);
+        catId = getLastInsertId();
+        insertCategory(QString::fromUtf8("早餐"), 0, catId);
+        insertCategory(QString::fromUtf8("午餐"), 0, catId);
+        insertCategory(QString::fromUtf8("晚餐"), 0, catId);
+        insertCategory(QString::fromUtf8("零食饮料"), 0, catId);
+
         insertCategory(QString::fromUtf8("交通"), 0);
+        catId = getLastInsertId();
+        insertCategory(QString::fromUtf8("公交地铁"), 0, catId);
+        insertCategory(QString::fromUtf8("打车"), 0, catId);
+        insertCategory(QString::fromUtf8("加油"), 0, catId);
+
         insertCategory(QString::fromUtf8("购物"), 0);
+        catId = getLastInsertId();
+        insertCategory(QString::fromUtf8("衣物"), 0, catId);
+        insertCategory(QString::fromUtf8("数码"), 0, catId);
+        insertCategory(QString::fromUtf8("日用"), 0, catId);
+
         insertCategory(QString::fromUtf8("娱乐"), 0);
+        catId = getLastInsertId();
+        insertCategory(QString::fromUtf8("游戏"), 0, catId);
+        insertCategory(QString::fromUtf8("电影"), 0, catId);
+        insertCategory(QString::fromUtf8("旅游"), 0, catId);
+
         insertCategory(QString::fromUtf8("医疗"), 0);
+        catId = getLastInsertId();
+        insertCategory(QString::fromUtf8("门诊"), 0, catId);
+        insertCategory(QString::fromUtf8("药品"), 0, catId);
+
         insertCategory(QString::fromUtf8("教育"), 0);
+        catId = getLastInsertId();
+        insertCategory(QString::fromUtf8("书籍"), 0, catId);
+        insertCategory(QString::fromUtf8("培训"), 0, catId);
+
         insertCategory(QString::fromUtf8("住房"), 0);
+        catId = getLastInsertId();
+        insertCategory(QString::fromUtf8("房租"), 0, catId);
+        insertCategory(QString::fromUtf8("物业"), 0, catId);
+        insertCategory(QString::fromUtf8("水电"), 0, catId);
+
+        insertCategory(QString::fromUtf8("日常"), 0);
+        catId = getLastInsertId();
+        insertCategory(QString::fromUtf8("话费"), 0, catId);
+        insertCategory(QString::fromUtf8("理发"), 0, catId);
+
         insertCategory(QString::fromUtf8("其他支出"), 0);
+
+        insertCategory(QString::fromUtf8("转账"), 2, -1, QStringLiteral("transfer.svg"));
     }
 
     QSqlQuery checkAccounts = executeSelectQuery("SELECT COUNT(*) FROM accounts");
@@ -122,19 +171,31 @@ bool DatabaseManager::createTables() {
     return true;
 }
 
-bool DatabaseManager::insertCategory(const QString& name, int type) {
+bool DatabaseManager::insertCategory(const QString& name, int type, int parentId, const QString& icon) {
     QSqlQuery q;
-    q.prepare("INSERT INTO categories (name, type) VALUES (:name, :type)");
+    if (parentId < 0) {
+        q.prepare("INSERT INTO categories (name, type, parent_id, icon) VALUES (:name, :type, NULL, :icon)");
+    } else {
+        q.prepare("INSERT INTO categories (name, type, parent_id, icon) VALUES (:name, :type, :parent_id, :icon)");
+        q.bindValue(":parent_id", parentId);
+    }
     q.bindValue(":name", name);
     q.bindValue(":type", type);
+    q.bindValue(":icon", icon);
     return q.exec();
 }
 
-bool DatabaseManager::updateCategory(int id, const QString& name, int type) {
+bool DatabaseManager::updateCategory(int id, const QString& name, int type, int parentId, const QString& icon) {
     QSqlQuery q;
-    q.prepare("UPDATE categories SET name = :name, type = :type WHERE id = :id");
+    if (parentId < 0) {
+        q.prepare("UPDATE categories SET name = :name, type = :type, parent_id = NULL, icon = :icon WHERE id = :id");
+    } else {
+        q.prepare("UPDATE categories SET name = :name, type = :type, parent_id = :parent_id, icon = :icon WHERE id = :id");
+        q.bindValue(":parent_id", parentId);
+    }
     q.bindValue(":name", name);
     q.bindValue(":type", type);
+    q.bindValue(":icon", icon);
     q.bindValue(":id", id);
     return q.exec();
 }
@@ -147,15 +208,45 @@ bool DatabaseManager::deleteCategory(int id) {
 }
 
 QSqlQuery DatabaseManager::getAllCategories() {
-    return executeSelectQuery("SELECT * FROM categories ORDER BY id ASC");
+    return executeSelectQuery("SELECT * FROM categories ORDER BY type, parent_id, id ASC");
 }
 
 QSqlQuery DatabaseManager::getCategoriesByType(int type) {
     QSqlQuery q;
-    q.prepare("SELECT * FROM categories WHERE type = :type ORDER BY name");
+    q.prepare("SELECT * FROM categories WHERE type = :type ORDER BY parent_id, id ASC");
     q.bindValue(":type", type);
     q.exec();
     return q;
+}
+
+QSqlQuery DatabaseManager::getSubCategories(int parentId) {
+    QSqlQuery q;
+    q.prepare("SELECT * FROM categories WHERE parent_id = :parent_id ORDER BY id ASC");
+    q.bindValue(":parent_id", parentId);
+    q.exec();
+    return q;
+}
+
+bool DatabaseManager::hasSubCategories(int categoryId) {
+    QSqlQuery q;
+    q.prepare("SELECT COUNT(*) FROM categories WHERE parent_id = :id");
+    q.bindValue(":id", categoryId);
+    q.exec();
+    if (q.next()) {
+        return q.value(0).toInt() > 0;
+    }
+    return false;
+}
+
+bool DatabaseManager::hasTransactions(int categoryId) {
+    QSqlQuery q;
+    q.prepare("SELECT COUNT(*) FROM transactions WHERE category_id = :id");
+    q.bindValue(":id", categoryId);
+    q.exec();
+    if (q.next()) {
+        return q.value(0).toInt() > 0;
+    }
+    return false;
 }
 
 bool DatabaseManager::insertAccount(const QString& name, const QString& icon) {
@@ -222,8 +313,10 @@ bool DatabaseManager::deleteTransaction(int id) {
 
 QSqlQuery DatabaseManager::getAllTransactions() {
     return executeSelectQuery("SELECT t.*, c.name as category_name, c.type as category_type, "
+                             "c.parent_id as category_parent_id, p.name as parent_category_name, "
                              "a.name as account_name FROM transactions t "
                              "JOIN categories c ON t.category_id = c.id "
+                             "LEFT JOIN categories p ON c.parent_id = p.id "
                              "JOIN accounts a ON t.account_id = a.id "
                              "ORDER BY t.date DESC");
 }
@@ -231,8 +324,10 @@ QSqlQuery DatabaseManager::getAllTransactions() {
 QSqlQuery DatabaseManager::getTransactionsByDateRange(const QDate& start, const QDate& end) {
     QSqlQuery q;
     q.prepare("SELECT t.*, c.name as category_name, c.type as category_type, "
+              "c.parent_id as category_parent_id, p.name as parent_category_name, "
               "a.name as account_name FROM transactions t "
               "JOIN categories c ON t.category_id = c.id "
+              "LEFT JOIN categories p ON c.parent_id = p.id "
               "JOIN accounts a ON t.account_id = a.id "
               "WHERE t.date >= :start AND t.date <= :end "
               "ORDER BY t.date DESC");
@@ -245,8 +340,10 @@ QSqlQuery DatabaseManager::getTransactionsByDateRange(const QDate& start, const 
 QSqlQuery DatabaseManager::getTransactionsByCategory(int categoryId) {
     QSqlQuery q;
     q.prepare("SELECT t.*, c.name as category_name, c.type as category_type, "
+              "c.parent_id as category_parent_id, p.name as parent_category_name, "
               "a.name as account_name FROM transactions t "
               "JOIN categories c ON t.category_id = c.id "
+              "LEFT JOIN categories p ON c.parent_id = p.id "
               "JOIN accounts a ON t.account_id = a.id "
               "WHERE t.category_id = :category_id "
               "ORDER BY t.date DESC");
@@ -258,8 +355,10 @@ QSqlQuery DatabaseManager::getTransactionsByCategory(int categoryId) {
 QSqlQuery DatabaseManager::getTransactionsByAccount(int accountId) {
     QSqlQuery q;
     q.prepare("SELECT t.*, c.name as category_name, c.type as category_type, "
+              "c.parent_id as category_parent_id, p.name as parent_category_name, "
               "a.name as account_name FROM transactions t "
               "JOIN categories c ON t.category_id = c.id "
+              "LEFT JOIN categories p ON c.parent_id = p.id "
               "JOIN accounts a ON t.account_id = a.id "
               "WHERE t.account_id = :account_id "
               "ORDER BY t.date DESC");
@@ -270,10 +369,13 @@ QSqlQuery DatabaseManager::getTransactionsByAccount(int accountId) {
 
 QSqlQuery DatabaseManager::getCategoryStatistics(const QDate& start, const QDate& end, int type) {
     QSqlQuery q;
-    q.prepare("SELECT c.name, SUM(t.amount) as total FROM transactions t "
+    q.prepare("SELECT COALESCE(p.name, c.name) as name, SUM(t.amount) as total "
+              "FROM transactions t "
               "JOIN categories c ON t.category_id = c.id "
+              "LEFT JOIN categories p ON c.parent_id = p.id "
               "WHERE c.type = :type AND t.date >= :start AND t.date <= :end "
-              "GROUP BY c.id, c.name ORDER BY total DESC");
+              "GROUP BY COALESCE(c.parent_id, c.id), COALESCE(p.name, c.name) "
+              "ORDER BY total DESC");
     q.bindValue(":type", type);
     q.bindValue(":start", start.toString(Qt::ISODate));
     q.bindValue(":end", end.toString(Qt::ISODate));
@@ -325,4 +427,58 @@ bool DatabaseManager::updateAccountBalance(int accountId, double balance) {
 
 QSqlDatabase DatabaseManager::getDatabase() {
     return m_database;
+}
+
+int DatabaseManager::getLastInsertId() {
+    QSqlQuery q = executeSelectQuery("SELECT last_insert_rowid()");
+    if (q.next()) {
+        return q.value(0).toInt();
+    }
+    return -1;
+}
+
+bool DatabaseManager::migrateDatabase() {
+    QSqlQuery checkCol = executeSelectQuery("PRAGMA table_info(categories)");
+    bool hasParentId = false;
+    bool hasIcon = false;
+    while (checkCol.next()) {
+        QString colName = checkCol.value("name").toString();
+        if (colName == "parent_id") {
+            hasParentId = true;
+        }
+        if (colName == "icon") {
+            hasIcon = true;
+        }
+    }
+    if (!hasParentId) {
+        if (!executeQuery("ALTER TABLE categories ADD COLUMN parent_id INTEGER DEFAULT NULL REFERENCES categories(id)")) {
+            return false;
+        }
+    }
+    if (!hasIcon) {
+        if (!executeQuery("ALTER TABLE categories ADD COLUMN icon TEXT DEFAULT ''")) {
+            return false;
+        }
+    }
+
+    QSqlQuery checkTransfer = executeSelectQuery(
+        QString("SELECT COUNT(*) FROM categories WHERE type = 2"));
+    checkTransfer.next();
+    if (checkTransfer.value(0).toInt() == 0) {
+        insertCategory(QString::fromUtf8("转账"), 2, -1, QStringLiteral("transfer.svg"));
+    }
+
+    return true;
+}
+
+int DatabaseManager::getCategoryIdByNameAndType(const QString& name, int type) {
+    QSqlQuery q;
+    q.prepare("SELECT id FROM categories WHERE name = :name AND type = :type AND parent_id IS NULL LIMIT 1");
+    q.bindValue(":name", name);
+    q.bindValue(":type", type);
+    q.exec();
+    if (q.next()) {
+        return q.value(0).toInt();
+    }
+    return -1;
 }

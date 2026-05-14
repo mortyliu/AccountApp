@@ -17,6 +17,7 @@
 #include <QFrame>
 #include <QFileDialog>
 #include <QHeaderView>
+#include <QStyle>
 
 TransactionView::TransactionView(QWidget* parent) : QWidget(parent), m_editId(-1) {
     m_categoryModel = new CategoryModel(this);
@@ -75,60 +76,71 @@ void TransactionView::setupUI() {
     inputCardLayout->setContentsMargins(16, 12, 16, 12);
     inputCardLayout->setSpacing(8);
 
-    QLabel* inputSectionLabel = new QLabel(QStringLiteral("新增记录"));
-    inputSectionLabel->setObjectName("sectionLabel");
+    QHBoxLayout* topRow = new QHBoxLayout();
+    topRow->setSpacing(8);
 
-    QHBoxLayout* inputLayout = new QHBoxLayout();
-    inputLayout->setSpacing(8);
+    m_toggleCategoryBtn = new QPushButton(QStringLiteral("选择分类 ▼"));
+    m_toggleCategoryBtn->setObjectName("categoryToggleBtn");
+    m_toggleCategoryBtn->setFixedHeight(36);
+    m_toggleCategoryBtn->setMinimumWidth(120);
 
-    m_typeCombo = new QComboBox();
-    m_typeCombo->addItem(QStringLiteral("支出"), 0);
-    m_typeCombo->addItem(QStringLiteral("收入"), 1);
-    m_typeCombo->setFixedWidth(90);
-
-    m_categoryCombo = new QComboBox();
-    updateCategoryCombo(0);
-    m_categoryCombo->setMinimumWidth(120);
+    m_selectedCategoryLabel = new QLabel(QStringLiteral("未选择分类"));
+    m_selectedCategoryLabel->setObjectName("selectedCategoryLabel");
 
     m_accountCombo = new QComboBox();
     QList<Account> accounts = m_accountModel->getAllAccounts();
     for (const Account& acc : accounts) {
         m_accountCombo->addItem(acc.name, acc.id);
     }
-    m_accountCombo->setMinimumWidth(120);
+    m_accountCombo->setMinimumWidth(100);
+    m_accountCombo->setFixedHeight(36);
 
     m_amountEdit = new QLineEdit();
     m_amountEdit->setPlaceholderText(QStringLiteral("金额"));
     m_amountEdit->setFixedWidth(100);
+    m_amountEdit->setFixedHeight(36);
 
     m_dateEdit = new QDateEdit(QDate::currentDate());
     m_dateEdit->setDisplayFormat("yyyy-MM-dd");
     m_dateEdit->setCalendarPopup(true);
     m_dateEdit->setFixedWidth(130);
+    m_dateEdit->setFixedHeight(36);
 
     m_noteEdit = new QLineEdit();
     m_noteEdit->setPlaceholderText(QStringLiteral("备注"));
+    m_noteEdit->setFixedHeight(36);
 
     m_addBtn = new QPushButton(QStringLiteral("添加"));
+    m_addBtn->setFixedHeight(36);
     m_editBtn = new QPushButton(QStringLiteral("修改"));
     m_editBtn->setObjectName("secondaryBtn");
     m_editBtn->setEnabled(false);
+    m_editBtn->setFixedHeight(36);
     m_deleteBtn = new QPushButton(QStringLiteral("删除"));
     m_deleteBtn->setObjectName("dangerBtn");
     m_deleteBtn->setEnabled(false);
+    m_deleteBtn->setFixedHeight(36);
 
-    inputLayout->addWidget(m_typeCombo);
-    inputLayout->addWidget(m_categoryCombo);
-    inputLayout->addWidget(m_accountCombo);
-    inputLayout->addWidget(m_amountEdit);
-    inputLayout->addWidget(m_dateEdit);
-    inputLayout->addWidget(m_noteEdit, 1);
-    inputLayout->addWidget(m_addBtn);
-    inputLayout->addWidget(m_editBtn);
-    inputLayout->addWidget(m_deleteBtn);
+    topRow->addWidget(m_toggleCategoryBtn);
+    topRow->addWidget(m_selectedCategoryLabel, 1);
+    topRow->addWidget(m_accountCombo);
+    topRow->addWidget(m_amountEdit);
+    topRow->addWidget(m_dateEdit);
+    topRow->addWidget(m_noteEdit, 1);
+    topRow->addWidget(m_addBtn);
+    topRow->addWidget(m_editBtn);
+    topRow->addWidget(m_deleteBtn);
 
-    inputCardLayout->addWidget(inputSectionLabel);
-    inputCardLayout->addLayout(inputLayout);
+    inputCardLayout->addLayout(topRow);
+
+    m_categoryGrid = new CategoryGridWidget();
+    m_categoryGrid->setCategoryModel(m_categoryModel);
+    m_categoryGrid->setVisible(false);
+    m_categoryGrid->setMinimumHeight(200);
+    m_categoryGrid->setMaximumHeight(280);
+    m_categoryGrid->setObjectName("categoryGridPanel");
+
+    inputCardLayout->addWidget(m_categoryGrid);
 
     QFrame* filterCard = new QFrame();
     filterCard->setObjectName("cardFrame");
@@ -144,12 +156,15 @@ void TransactionView::setupUI() {
 
     m_filterCategoryCombo = new QComboBox();
     m_filterCategoryCombo->addItem(QStringLiteral("全部分类"), -1);
-    QList<Category> categories = m_categoryModel->getCategoriesByType(0);
-    categories += m_categoryModel->getCategoriesByType(1);
-    for (const Category& cat : categories) {
-        m_filterCategoryCombo->addItem(cat.name, cat.id);
+    QList<Category> allCategories = m_categoryModel->getCategoriesByType(0);
+    allCategories += m_categoryModel->getCategoriesByType(1);
+    allCategories += m_categoryModel->getCategoriesByType(2);
+    for (const Category& cat : allCategories) {
+        QString displayName = m_categoryModel->getFullCategoryName(cat.id);
+        m_filterCategoryCombo->addItem(displayName, cat.id);
     }
-    m_filterCategoryCombo->setMinimumWidth(120);
+    m_filterCategoryCombo->setMinimumWidth(140);
+    m_filterCategoryCombo->setFixedHeight(32);
 
     m_filterAccountCombo = new QComboBox();
     m_filterAccountCombo->addItem(QStringLiteral("全部账户"), -1);
@@ -158,22 +173,28 @@ void TransactionView::setupUI() {
         m_filterAccountCombo->addItem(acc.name, acc.id);
     }
     m_filterAccountCombo->setMinimumWidth(120);
+    m_filterAccountCombo->setFixedHeight(32);
 
     m_filterStartDate = new QDateEdit();
     m_filterStartDate->setDisplayFormat("yyyy-MM-dd");
     m_filterStartDate->setCalendarPopup(true);
     m_filterStartDate->setFixedWidth(130);
+    m_filterStartDate->setFixedHeight(32);
 
     m_filterEndDate = new QDateEdit();
     m_filterEndDate->setDisplayFormat("yyyy-MM-dd");
     m_filterEndDate->setCalendarPopup(true);
     m_filterEndDate->setFixedWidth(130);
+    m_filterEndDate->setFixedHeight(32);
 
     m_filterBtn = new QPushButton(QStringLiteral("筛选"));
+    m_filterBtn->setFixedHeight(32);
     m_clearFilterBtn = new QPushButton(QStringLiteral("清除"));
     m_clearFilterBtn->setObjectName("secondaryBtn");
+    m_clearFilterBtn->setFixedHeight(32);
     m_importBtn = new QPushButton(QStringLiteral("导入CSV"));
     m_importBtn->setObjectName("importBtn");
+    m_importBtn->setFixedHeight(32);
 
     filterLayout->addWidget(m_filterCategoryCombo);
     filterLayout->addWidget(m_filterAccountCombo);
@@ -195,11 +216,12 @@ void TransactionView::setupUI() {
     m_tableView->verticalHeader()->setVisible(false);
     m_tableView->setShowGrid(false);
     m_tableView->horizontalHeader()->setStretchLastSection(true);
+    m_tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
     m_tableView->setColumnWidth(0, 100);
     m_tableView->setColumnWidth(1, 120);
-    m_tableView->setColumnWidth(2, 120);
+    m_tableView->setColumnWidth(2, 80);
     m_tableView->setColumnWidth(3, 60);
-    m_tableView->setColumnWidth(4, 100);
+    m_tableView->setMinimumHeight(200);
 
     mainLayout->addLayout(summaryLayout);
     mainLayout->addWidget(inputCard);
@@ -210,7 +232,8 @@ void TransactionView::setupUI() {
     connect(m_editBtn, &QPushButton::clicked, this, &TransactionView::onEditClicked);
     connect(m_deleteBtn, &QPushButton::clicked, this, &TransactionView::onDeleteClicked);
     connect(m_tableView, &QTableView::doubleClicked, this, &TransactionView::onTableDoubleClicked);
-    connect(m_typeCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &TransactionView::onTypeChanged);
+    connect(m_toggleCategoryBtn, &QPushButton::clicked, this, &TransactionView::onToggleCategoryPanel);
+    connect(m_categoryGrid, &CategoryGridWidget::categorySelected, this, &TransactionView::onCategorySelected);
     connect(m_filterBtn, &QPushButton::clicked, this, &TransactionView::onFilterClicked);
     connect(m_clearFilterBtn, &QPushButton::clicked, this, &TransactionView::onClearFilterClicked);
     connect(m_importBtn, &QPushButton::clicked, this, &TransactionView::onImportClicked);
@@ -230,20 +253,31 @@ void TransactionView::updateSummary() {
 
 void TransactionView::refreshData() {
     m_controller.refresh();
+    m_categoryModel->refresh();
+    m_categoryGrid->refresh();
     updateSummary();
 }
 
-void TransactionView::updateCategoryCombo(int type) {
-    m_categoryCombo->clear();
-    QList<Category> categories = m_categoryModel->getCategoriesByType(type);
-    for (const Category& cat : categories) {
-        m_categoryCombo->addItem(cat.name, cat.id);
+int TransactionView::getSelectedCategoryId() const {
+    return m_categoryGrid->selectedCategoryId();
+}
+
+void TransactionView::onToggleCategoryPanel() {
+    bool visible = !m_categoryGrid->isVisible();
+    m_categoryGrid->setVisible(visible);
+    if (visible) {
+        m_toggleCategoryBtn->setText(QStringLiteral("选择分类 ▲"));
+    } else {
+        m_toggleCategoryBtn->setText(QStringLiteral("选择分类 ▼"));
     }
 }
 
-void TransactionView::onTypeChanged(int index) {
-    int type = m_typeCombo->currentData().toInt();
-    updateCategoryCombo(type);
+void TransactionView::onCategorySelected(int categoryId) {
+    QString fullName = m_categoryModel->getFullCategoryName(categoryId);
+    m_selectedCategoryLabel->setText(fullName);
+    m_selectedCategoryLabel->setObjectName("categoryToggleBtn");
+    style()->unpolish(m_selectedCategoryLabel);
+    style()->polish(m_selectedCategoryLabel);
 }
 
 void TransactionView::onAddClicked() {
@@ -253,7 +287,12 @@ void TransactionView::onAddClicked() {
         return;
     }
 
-    int categoryId = m_categoryCombo->currentData().toInt();
+    int categoryId = getSelectedCategoryId();
+    if (categoryId < 0) {
+        QMessageBox::warning(this, QStringLiteral("警告"), QStringLiteral("请选择分类"));
+        return;
+    }
+
     int accountId = m_accountCombo->currentData().toInt();
     QDate date = m_dateEdit->date();
     QString note = m_noteEdit->text().trimmed();
@@ -274,7 +313,7 @@ void TransactionView::onEditClicked() {
         return;
     }
 
-    int categoryId = m_categoryCombo->currentData().toInt();
+    int categoryId = getSelectedCategoryId();
     int accountId = m_accountCombo->currentData().toInt();
     QDate date = m_dateEdit->date();
     QString note = m_noteEdit->text().trimmed();
@@ -307,35 +346,54 @@ void TransactionView::onDeleteClicked() {
 }
 
 void TransactionView::onTableDoubleClicked(const QModelIndex& index) {
-    if (index.isValid()) {
-        m_editId = index.sibling(index.row(), 0).data(Qt::UserRole).toInt();
-        QString categoryName = index.sibling(index.row(), 1).data().toString();
-        QString accountName = index.sibling(index.row(), 2).data().toString();
-        QString typeStr = index.sibling(index.row(), 3).data().toString();
-        QString amountStr = index.sibling(index.row(), 4).data().toString();
-        QString dateStr = index.sibling(index.row(), 0).data().toString();
-        QString note = index.sibling(index.row(), 5).data().toString();
+    if (!index.isValid()) return;
 
-        m_typeCombo->setCurrentIndex(typeStr == QStringLiteral("收入") ? 1 : 0);
-        onTypeChanged(m_typeCombo->currentIndex());
+    m_editId = index.sibling(index.row(), 0).data(Qt::UserRole).toInt();
+    QString categoryName = index.sibling(index.row(), 1).data().toString();
+    QString accountName = index.sibling(index.row(), 2).data().toString();
+    QString typeStr = index.sibling(index.row(), 3).data().toString();
+    QString amountStr = index.sibling(index.row(), 4).data().toString();
+    QString dateStr = index.sibling(index.row(), 0).data().toString();
+    QString note = index.sibling(index.row(), 5).data().toString();
 
-        int categoryIndex = m_categoryCombo->findText(categoryName);
-        if (categoryIndex >= 0) {
-            m_categoryCombo->setCurrentIndex(categoryIndex);
+    int targetCategoryId = -1;
+
+    for (int i = 0; i < m_controller.getModel()->rowCount(); ++i) {
+        QModelIndex idx = m_controller.getModel()->index(i, 0);
+        if (idx.data(Qt::UserRole).toInt() == m_editId) {
+            targetCategoryId = idx.sibling(i, 1).data(Qt::UserRole).toInt();
+            break;
         }
-
-        int accountIndex = m_accountCombo->findText(accountName);
-        if (accountIndex >= 0) {
-            m_accountCombo->setCurrentIndex(accountIndex);
-        }
-
-        m_amountEdit->setText(amountStr.mid(1));
-        m_dateEdit->setDate(QDate::fromString(dateStr, "yyyy-MM-dd"));
-        m_noteEdit->setText(note);
-
-        m_editBtn->setEnabled(true);
-        m_deleteBtn->setEnabled(true);
     }
+
+    if (targetCategoryId < 0) {
+        int searchType = 0;
+        if (typeStr == QStringLiteral("收入")) searchType = 1;
+        else if (typeStr == QStringLiteral("转账")) searchType = 2;
+        for (const Category& c : m_categoryModel->getCategoriesByType(searchType)) {
+            if (m_categoryModel->getFullCategoryName(c.id) == categoryName || c.name == categoryName) {
+                targetCategoryId = c.id;
+                break;
+            }
+        }
+    }
+
+    if (targetCategoryId >= 0) {
+        m_categoryGrid->setSelectedCategory(targetCategoryId);
+        onCategorySelected(targetCategoryId);
+    }
+
+    int accountIndex = m_accountCombo->findText(accountName);
+    if (accountIndex >= 0) {
+        m_accountCombo->setCurrentIndex(accountIndex);
+    }
+
+    m_amountEdit->setText(amountStr.mid(1));
+    m_dateEdit->setDate(QDate::fromString(dateStr, "yyyy-MM-dd"));
+    m_noteEdit->setText(note);
+
+    m_editBtn->setEnabled(true);
+    m_deleteBtn->setEnabled(true);
 }
 
 void TransactionView::onFilterClicked() {
@@ -372,6 +430,8 @@ void TransactionView::onImportClicked() {
 
     if (CsvExporter::importTransactions(filePath)) {
         m_controller.refresh();
+        m_categoryModel->refresh();
+        m_categoryGrid->refresh();
         updateSummary();
         QMessageBox::information(this, QStringLiteral("成功"), QStringLiteral("导入成功"));
     } else {

@@ -1,4 +1,4 @@
-#include "ui/MainWindow.h"
+﻿#include "ui/MainWindow.h"
 #include <QApplication>
 #include <QStyleFactory>
 #include <QFile>
@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
         app.setStyleSheet(style);
     }
 
-    app.setWindowIcon(QIcon(":/icons/app.svg"));
+    app.setWindowIcon(QIcon(":/icons/app.png"));
 
     MainWindow window;
     window.show();

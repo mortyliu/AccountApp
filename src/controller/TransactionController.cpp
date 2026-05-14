@@ -58,31 +58,36 @@ bool TransactionController::transfer(int fromAccountId, int toAccountId, double 
         return false;
     }
 
+    int transferCategoryId = db.getCategoryIdByNameAndType(
+        QString::fromUtf8("转账"), 2);
+    if (transferCategoryId < 0) {
+        db.insertCategory(QString::fromUtf8("转账"), 2, -1, QStringLiteral("transfer.svg"));
+        transferCategoryId = db.getLastInsertId();
+    }
+
     QSqlDatabase database = db.getDatabase();
     database.transaction();
 
     bool success = true;
 
     QSqlQuery query(database);
-    query.prepare("INSERT INTO transactions (category_id, account_id, amount, type, date, note) "
-                  "VALUES (?, ?, ?, ?, ?, ?)");
+    query.prepare("INSERT INTO transactions (category_id, account_id, amount, date, note) "
+                  "VALUES (?, ?, ?, ?, ?)");
     
-    query.addBindValue(0);
+    query.addBindValue(transferCategoryId);
     query.addBindValue(fromAccountId);
-    query.addBindValue(amount);
-    query.addBindValue(0);
+    query.addBindValue(-amount);
     query.addBindValue(date.toString("yyyy-MM-dd"));
     QString fromNote = note.isEmpty() ? QStringLiteral("transfer_out") : note + QStringLiteral("_out");
     query.addBindValue(fromNote);
     success &= query.exec();
 
-    query.prepare("INSERT INTO transactions (category_id, account_id, amount, type, date, note) "
-                  "VALUES (?, ?, ?, ?, ?, ?)");
+    query.prepare("INSERT INTO transactions (category_id, account_id, amount, date, note) "
+                  "VALUES (?, ?, ?, ?, ?)");
     
-    query.addBindValue(0);
+    query.addBindValue(transferCategoryId);
     query.addBindValue(toAccountId);
     query.addBindValue(amount);
-    query.addBindValue(1);
     query.addBindValue(date.toString("yyyy-MM-dd"));
     QString toNote = note.isEmpty() ? QStringLiteral("transfer_in") : note + QStringLiteral("_in");
     query.addBindValue(toNote);

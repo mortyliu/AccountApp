@@ -1,4 +1,4 @@
-﻿#ifndef TRANSACTIONMODEL_H
+#ifndef TRANSACTIONMODEL_H
 #define TRANSACTIONMODEL_H
 
 #include <QAbstractTableModel>
@@ -10,12 +10,21 @@ struct Transaction {
     int id;
     int categoryId;
     QString categoryName;
+    QString parentCategoryName;
     int categoryType;
+    int categoryParentId;
     int accountId;
     QString accountName;
     double amount;
     QDate date;
     QString note;
+
+    QString fullCategoryName() const {
+        if (!parentCategoryName.isEmpty()) {
+            return parentCategoryName + "-" + categoryName;
+        }
+        return categoryName;
+    }
 };
 
 class TransactionModel : public QAbstractTableModel {
@@ -41,6 +50,7 @@ public:
 
     double getTotalIncome() const;
     double getTotalExpense() const;
+    double getTotalTransfer() const;
 
 private:
     QList<Transaction> m_transactions;

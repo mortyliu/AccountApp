@@ -2,5 +2,63 @@
 <qresource>
     <file>style.qss</file>
     <file>icons/app.svg</file>
+    <file>icons/app.png</file>
+    <file>icons/branch-closed.svg</file>
+    <file>icons/branch-open.svg</file>
+    <file>icons/cat_food.svg</file>
+    <file>icons/cat_transport.svg</file>
+    <file>icons/cat_shopping.svg</file>
+    <file>icons/cat_entertainment.svg</file>
+    <file>icons/cat_medical.svg</file>
+    <file>icons/cat_education.svg</file>
+    <file>icons/cat_housing.svg</file>
+    <file>icons/cat_daily.svg</file>
+    <file>icons/cat_other_expense.svg</file>
+    <file>icons/cat_salary.svg</file>
+    <file>icons/cat_bonus.svg</file>
+    <file>icons/cat_investment.svg</file>
+    <file>icons/cat_other_income.svg</file>
+    <file>icons/cat_breakfast.svg</file>
+    <file>icons/cat_lunch.svg</file>
+    <file>icons/cat_dinner.svg</file>
+    <file>icons/cat_snack.svg</file>
+    <file>icons/cat_subway.svg</file>
+    <file>icons/cat_taxi.svg</file>
+    <file>icons/cat_gasoline.svg</file>
+    <file>icons/cat_clothing.svg</file>
+    <file>icons/cat_digital.svg</file>
+    <file>icons/cat_daily_goods.svg</file>
+    <file>icons/cat_game.svg</file>
+    <file>icons/cat_movie.svg</file>
+    <file>icons/cat_travel.svg</file>
+    <file>icons/cat_clinic.svg</file>
+    <file>icons/cat_medicine.svg</file>
+    <file>icons/cat_book.svg</file>
+    <file>icons/cat_training.svg</file>
+    <file>icons/cat_rent.svg</file>
+    <file>icons/cat_property.svg</file>
+    <file>icons/cat_utilities.svg</file>
+    <file>icons/cat_phone_bill.svg</file>
+    <file>icons/cat_haircut.svg</file>
+    <file>icons/transfer.svg</file>
+    <file>icons/food.svg</file>
+    <file>icons/shopping.svg</file>
+    <file>icons/transport.svg</file>
+    <file>icons/salary.svg</file>
+    <file>icons/redpack.svg</file>
+    <file>icons/medical.svg</file>
+    <file>icons/education.svg</file>
+    <file>icons/entertainment.svg</file>
+    <file>icons/housing.svg</file>
+    <file>icons/water.svg</file>
+    <file>icons/phone.svg</file>
+    <file>icons/finance.svg</file>
+    <file>icons/cash.svg</file>
+    <file>icons/bank.svg</file>
+    <file>icons/insurance.svg</file>
+    <file>icons/travel.svg</file>
+    <file>icons/clothes.svg</file>
+    <file>icons/beauty.svg</file>
+    <file>icons/other.svg</file>
 </qresource>
 </RCC>

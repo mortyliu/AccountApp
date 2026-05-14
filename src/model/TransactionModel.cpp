@@ -1,4 +1,4 @@
-﻿#include "TransactionModel.h"
+#include "TransactionModel.h"
 #include "DatabaseManager.h"
 
 TransactionModel::TransactionModel(QObject* parent) 
@@ -27,18 +27,30 @@ QVariant TransactionModel::data(const QModelIndex& index, int role) const {
         return QVariant(transaction.id);
     }
 
+    if (role == Qt::UserRole && index.column() == 1) {
+        return QVariant(transaction.categoryId);
+    }
+
     if (role == Qt::DisplayRole || role == Qt::EditRole) {
         switch (index.column()) {
         case 0:
             return QVariant(transaction.date.toString("yyyy-MM-dd"));
         case 1:
-            return QVariant(transaction.categoryName);
+            return QVariant(transaction.fullCategoryName());
         case 2:
             return QVariant(transaction.accountName);
         case 3:
-            return QVariant(transaction.categoryType == 1 ? QString::fromUtf8("收入") : QString::fromUtf8("支出"));
+            return QVariant(transaction.categoryType == 1 ? QString::fromUtf8("收入") :
+                           (transaction.categoryType == 2 ? QString::fromUtf8("转账") : QString::fromUtf8("支出")));
         case 4: {
-            QString prefix = transaction.categoryType == 1 ? "+" : "-";
+            QString prefix;
+            if (transaction.categoryType == 1) {
+                prefix = "+";
+            } else if (transaction.categoryType == 2) {
+                prefix = "±";
+            } else {
+                prefix = "-";
+            }
             return QVariant(prefix + QString("%1").arg(transaction.amount, 0, 'f', 2));
         }
         case 5:
@@ -116,7 +128,9 @@ void TransactionModel::refresh() {
         transaction.id = query.value("id").toInt();
         transaction.categoryId = query.value("category_id").toInt();
         transaction.categoryName = query.value("category_name").toString();
+        transaction.parentCategoryName = query.value("parent_category_name").toString();
         transaction.categoryType = query.value("category_type").toInt();
+        transaction.categoryParentId = query.value("category_parent_id").isNull() ? -1 : query.value("category_parent_id").toInt();
         transaction.accountId = query.value("account_id").toInt();
         transaction.accountName = query.value("account_name").toString();
         transaction.amount = query.value("amount").toDouble();
@@ -174,6 +188,16 @@ double TransactionModel::getTotalExpense() const {
     double total = 0.0;
     for (const Transaction& t : m_transactions) {
         if (t.categoryType == 0) {
+            total += t.amount;
+        }
+    }
+    return total;
+}
+
+double TransactionModel::getTotalTransfer() const {
+    double total = 0.0;
+    for (const Transaction& t : m_transactions) {
+        if (t.categoryType == 2) {
             total += t.amount;
         }
     }

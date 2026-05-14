@@ -1,4 +1,4 @@
-#ifndef TRANSACTIONVIEW_H
+﻿#ifndef TRANSACTIONVIEW_H
 #define TRANSACTIONVIEW_H
 
 #include <QWidget>
@@ -13,6 +13,7 @@
 #include "../model/CategoryModel.h"
 #include "../model/AccountModel.h"
 #include "../model/DatabaseManager.h"
+#include "CategoryGridWidget.h"
 
 class TransactionView : public QWidget {
     Q_OBJECT
@@ -29,13 +30,14 @@ private slots:
     void onFilterClicked();
     void onClearFilterClicked();
     void onTableDoubleClicked(const QModelIndex& index);
-    void onTypeChanged(int index);
+    void onCategorySelected(int categoryId);
+    void onToggleCategoryPanel();
     void onImportClicked();
 
 private:
     void setupUI();
-    void updateCategoryCombo(int type);
     void updateSummary();
+    int getSelectedCategoryId() const;
 
     TransactionController m_controller;
     CategoryModel* m_categoryModel;
@@ -43,8 +45,10 @@ private:
 
     QTableView* m_tableView;
 
-    QComboBox* m_typeCombo;
-    QComboBox* m_categoryCombo;
+    QPushButton* m_toggleCategoryBtn;
+    QLabel* m_selectedCategoryLabel;
+    CategoryGridWidget* m_categoryGrid;
+
     QComboBox* m_accountCombo;
     QLineEdit* m_amountEdit;
     QDateEdit* m_dateEdit;

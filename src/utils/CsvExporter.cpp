@@ -7,19 +7,20 @@
 #include <QDate>
 #include <QDebug>
 
-static int getOrCreateCategory(const QString& categoryName, int type) {
-    QSqlQuery query = DatabaseManager::instance().executeSelectQuery(
-        QString("SELECT id FROM categories WHERE name = '%1' AND type = %2").arg(categoryName, QString::number(type)));
+static int getOrCreateCategory(const QString& categoryName, int type, int parentId = -1) {
+    QSqlQuery query;
+    if (parentId < 0) {
+        query = DatabaseManager::instance().executeSelectQuery(
+            QString("SELECT id FROM categories WHERE name = '%1' AND type = %2 AND parent_id IS NULL").arg(categoryName, QString::number(type)));
+    } else {
+        query = DatabaseManager::instance().executeSelectQuery(
+            QString("SELECT id FROM categories WHERE name = '%1' AND type = %2 AND parent_id = %3").arg(categoryName, QString::number(type), QString::number(parentId)));
+    }
     if (query.next()) {
         return query.value("id").toInt();
     }
-    DatabaseManager::instance().insertCategory(categoryName, type);
-    query = DatabaseManager::instance().executeSelectQuery(
-        QString("SELECT id FROM categories WHERE name = '%1' AND type = %2").arg(categoryName, QString::number(type)));
-    if (query.next()) {
-        return query.value("id").toInt();
-    }
-    return -1;
+    DatabaseManager::instance().insertCategory(categoryName, type, parentId);
+    return DatabaseManager::instance().getLastInsertId();
 }
 
 static int getOrCreateAccount(const QString& accountName) {
@@ -30,12 +31,7 @@ static int getOrCreateAccount(const QString& accountName) {
         return query.value("id").toInt();
     }
     DatabaseManager::instance().insertAccount(accountName, "");
-    query = DatabaseManager::instance().executeSelectQuery(
-        QString("SELECT id FROM accounts WHERE name = '%1'").arg(accountName));
-    if (query.next()) {
-        return query.value("id").toInt();
-    }
-    return -1;
+    return DatabaseManager::instance().getLastInsertId();
 }
 
 bool CsvExporter::exportTransactions(const QString& filePath, const QDate& start, const QDate& end) {
@@ -58,13 +54,20 @@ bool CsvExporter::exportTransactions(const QString& filePath, const QDate& start
     while (query.next()) {
         QString date = query.value("date").toString();
         QString categoryName = query.value("category_name").toString();
+        QString parentCategoryName = query.value("parent_category_name").toString();
         QString accountName = query.value("account_name").toString();
-        QString type = query.value("category_type").toInt() == 1 ? QString::fromUtf8("收入") : QString::fromUtf8("支出");
+        QString type = query.value("category_type").toInt() == 1 ? QString::fromUtf8("收入") :
+                      (query.value("category_type").toInt() == 2 ? QString::fromUtf8("转账") : QString::fromUtf8("支出"));
         QString amount = QString::number(query.value("amount").toDouble());
         QString note = query.value("note").toString();
 
+        QString fullCategory = categoryName;
+        if (!parentCategoryName.isEmpty()) {
+            fullCategory = parentCategoryName + "-" + categoryName;
+        }
+
         out << date << ","
-            << "\"" << categoryName << "\","
+            << "\"" << fullCategory << "\","
             << "\"" << accountName << "\","
             << type << ","
             << amount << ","
@@ -125,7 +128,7 @@ bool CsvExporter::importTransactions(const QString& filePath) {
         } else if (typeStr == QString::fromUtf8("转账")) {
             int fromAccountId = getOrCreateAccount(account1);
             int toAccountId = getOrCreateAccount(account2);
-            int transferCategoryId = getOrCreateCategory(QString::fromUtf8("转账"), 0);
+            int transferCategoryId = getOrCreateCategory(QString::fromUtf8("转账"), 2);
 
             if (fromAccountId >= 0 && toAccountId >= 0) {
                 DatabaseManager::instance().insertTransaction(
@@ -147,16 +150,18 @@ bool CsvExporter::importTransactions(const QString& filePath) {
             continue;
         }
 
-        QString fullCategoryName = categoryName;
+        int finalCategoryId = -1;
         if (!subCategory.isEmpty() && subCategory != categoryName) {
-            fullCategoryName = QString::fromUtf8("%1-%2").arg(categoryName, subCategory);
+            int parentId = getOrCreateCategory(categoryName, categoryType);
+            finalCategoryId = getOrCreateCategory(subCategory, categoryType, parentId);
+        } else {
+            finalCategoryId = getOrCreateCategory(categoryName.isEmpty() ? QString::fromUtf8("其它") : categoryName, categoryType);
         }
 
-        int categoryId = getOrCreateCategory(fullCategoryName.isEmpty() ? QString::fromUtf8("其它") : fullCategoryName, categoryType);
         int accountId = getOrCreateAccount(account1);
 
-        if (categoryId >= 0 && accountId >= 0) {
-            DatabaseManager::instance().insertTransaction(categoryId, accountId, qAbs(amount), date, note);
+        if (finalCategoryId >= 0 && accountId >= 0) {
+            DatabaseManager::instance().insertTransaction(finalCategoryId, accountId, qAbs(amount), date, note);
             importedCount++;
         }
     }
