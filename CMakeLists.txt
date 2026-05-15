@@ -41,6 +41,7 @@ set(HEADERS
     src/model/CategoryModel.h
     src/model/AccountModel.h
     src/model/TransactionModel.h
+    src/model/Constants.h
     src/controller/CategoryController.h
     src/controller/AccountController.h
     src/controller/TransactionController.h

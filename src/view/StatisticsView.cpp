@@ -1,5 +1,6 @@
 #include "StatisticsView.h"
 #include "../controller/StatisticsController.h"
+#include "../model/Constants.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QComboBox>
@@ -39,7 +40,7 @@ void StatisticsView::setupUI() {
     m_typeCombo = new QComboBox();
     m_typeCombo->addItem(QStringLiteral("支出"), 0);
     m_typeCombo->addItem(QStringLiteral("收入"), 1);
-    m_typeCombo->addItem(QStringLiteral("转账"), 2);
+    m_typeCombo->addItem(TransferCategory::TRANSFER, static_cast<int>(CategoryType::TRANSFER));
 
     m_chartTypeCombo = new QComboBox();
     m_chartTypeCombo->addItem(QStringLiteral("饼图"), 0);
@@ -111,8 +112,8 @@ void StatisticsView::updatePieChart() {
 
     m_chart->addSeries(m_pieSeries);
     QString titleStr;
-    if (type == 1) titleStr = QStringLiteral("收入分类统计");
-    else if (type == 2) titleStr = QStringLiteral("转账分类统计");
+    if (type == static_cast<int>(CategoryType::INCOME)) titleStr = QStringLiteral("收入分类统计");
+    else if (type == static_cast<int>(CategoryType::TRANSFER)) titleStr = QStringLiteral("转账分类统计");
     else titleStr = QStringLiteral("支出分类统计");
     m_chart->setTitle(titleStr);
     m_chart->legend()->setAlignment(Qt::AlignBottom);
@@ -151,8 +152,8 @@ void StatisticsView::updateLineChart() {
     m_lineSeries->attachAxis(axisY);
 
     QString lineTitle;
-    if (type == 1) lineTitle = QString("%1").arg(year) + QStringLiteral("年收入趋势");
-    else if (type == 2) lineTitle = QString("%1").arg(year) + QStringLiteral("年转账趋势");
+    if (type == static_cast<int>(CategoryType::INCOME)) lineTitle = QString("%1").arg(year) + QStringLiteral("年收入趋势");
+    else if (type == static_cast<int>(CategoryType::TRANSFER)) lineTitle = QString("%1").arg(year) + QStringLiteral("年转账趋势");
     else lineTitle = QString("%1").arg(year) + QStringLiteral("年支出趋势");
     m_chart->setTitle(lineTitle);
     m_chart->legend()->setVisible(false);

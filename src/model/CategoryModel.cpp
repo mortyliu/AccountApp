@@ -1,5 +1,6 @@
 #include "CategoryModel.h"
 #include "DatabaseManager.h"
+#include "Constants.h"
 
 QString Category::displayName() const {
     if (parentId < 0) {
@@ -36,8 +37,8 @@ QVariant CategoryModel::data(const QModelIndex& index, int role) const {
         case 1:
             return QVariant(category.name);
         case 2:
-            return QVariant(category.type == 1 ? QString::fromUtf8("收入") :
-                           (category.type == 2 ? QString::fromUtf8("转账") : QString::fromUtf8("支出")));
+            return QVariant(category.type == static_cast<int>(CategoryType::INCOME) ? QString::fromUtf8("收入") :
+                           (category.type == static_cast<int>(CategoryType::TRANSFER) ? TransferCategory::TRANSFER : QString::fromUtf8("支出")));
         case 3: {
             if (category.parentId < 0) {
                 return QVariant(QString::fromUtf8("—"));

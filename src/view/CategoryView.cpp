@@ -2,6 +2,7 @@
 #include "IconSelectDialog.h"
 #include "../model/CategoryModel.h"
 #include "../model/DatabaseManager.h"
+#include "../model/Constants.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLineEdit>
@@ -47,7 +48,7 @@ void CategoryView::setupUI() {
     m_typeCombo = new QComboBox();
     m_typeCombo->addItem(QStringLiteral("支出"), 0);
     m_typeCombo->addItem(QStringLiteral("收入"), 1);
-    m_typeCombo->addItem(QStringLiteral("转账"), 2);
+    m_typeCombo->addItem(TransferCategory::TRANSFER, static_cast<int>(CategoryType::TRANSFER));
     m_typeCombo->setFixedWidth(90);
     m_typeCombo->setFixedHeight(36);
 

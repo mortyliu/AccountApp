@@ -17,6 +17,7 @@ public:
     bool updateTransaction(int id, int categoryId, int accountId, double amount,
                           const QDate& date, const QString& note);
     bool deleteTransaction(int id);
+    bool deleteTransactionWithTransferPair(int id);
     void refresh();
     void filterByDateRange(const QDate& start, const QDate& end);
     void filterByCategory(int categoryId);
@@ -25,6 +26,9 @@ public:
 
     double getTotalIncome() const;
     double getTotalExpense() const;
+    double getTotalTransfer() const;
+    double getTotalTransferIn() const;
+    double getTotalTransferOut() const;
 
     static bool transfer(int fromAccountId, int toAccountId, double amount,
                         const QDate& date, const QString& note = "");

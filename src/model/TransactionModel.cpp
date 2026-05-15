@@ -1,5 +1,6 @@
 #include "TransactionModel.h"
 #include "DatabaseManager.h"
+#include "Constants.h"
 
 TransactionModel::TransactionModel(QObject* parent) 
     : QAbstractTableModel(parent), m_filterCategoryId(-1), m_filterAccountId(-1) {
@@ -40,18 +41,21 @@ QVariant TransactionModel::data(const QModelIndex& index, int role) const {
         case 2:
             return QVariant(transaction.accountName);
         case 3:
-            return QVariant(transaction.categoryType == 1 ? QString::fromUtf8("收入") :
-                           (transaction.categoryType == 2 ? QString::fromUtf8("转账") : QString::fromUtf8("支出")));
+            return QVariant(transaction.categoryType == static_cast<int>(CategoryType::INCOME) ? QString::fromUtf8("收入") :
+                           (transaction.isTransferOut() ? TransferCategory::TRANSFER_OUT :
+                            (transaction.isTransferIn() ? TransferCategory::TRANSFER_IN : QString::fromUtf8("支出"))));
         case 4: {
             QString prefix;
-            if (transaction.categoryType == 1) {
+            if (transaction.categoryType == static_cast<int>(CategoryType::INCOME)) {
                 prefix = "+";
-            } else if (transaction.categoryType == 2) {
-                prefix = "±";
+            } else if (transaction.isTransferOut()) {
+                prefix = "-";
+            } else if (transaction.isTransferIn()) {
+                prefix = "+";
             } else {
                 prefix = "-";
             }
-            return QVariant(prefix + QString("%1").arg(transaction.amount, 0, 'f', 2));
+            return QVariant(prefix + QString("%1").arg(qAbs(transaction.amount), 0, 'f', 2));
         }
         case 5:
             return QVariant(transaction.note);
@@ -136,6 +140,7 @@ void TransactionModel::refresh() {
         transaction.amount = query.value("amount").toDouble();
         transaction.date = QDate::fromString(query.value("date").toString(), Qt::ISODate);
         transaction.note = query.value("note").toString();
+        transaction.transferId = query.value("transfer_id").isNull() ? -1 : query.value("transfer_id").toInt();
         m_transactions.append(transaction);
     }
 
@@ -177,7 +182,7 @@ void TransactionModel::clearFilters() {
 double TransactionModel::getTotalIncome() const {
     double total = 0.0;
     for (const Transaction& t : m_transactions) {
-        if (t.categoryType == 1) {
+        if (t.categoryType == static_cast<int>(CategoryType::INCOME)) {
             total += t.amount;
         }
     }
@@ -187,7 +192,7 @@ double TransactionModel::getTotalIncome() const {
 double TransactionModel::getTotalExpense() const {
     double total = 0.0;
     for (const Transaction& t : m_transactions) {
-        if (t.categoryType == 0) {
+        if (t.categoryType == static_cast<int>(CategoryType::EXPENSE)) {
             total += t.amount;
         }
     }
@@ -197,8 +202,28 @@ double TransactionModel::getTotalExpense() const {
 double TransactionModel::getTotalTransfer() const {
     double total = 0.0;
     for (const Transaction& t : m_transactions) {
-        if (t.categoryType == 2) {
+        if (t.categoryType == static_cast<int>(CategoryType::TRANSFER)) {
+            total += qAbs(t.amount);
+        }
+    }
+    return total;
+}
+
+double TransactionModel::getTotalTransferIn() const {
+    double total = 0.0;
+    for (const Transaction& t : m_transactions) {
+        if (t.isTransferIn()) {
             total += t.amount;
+        }
+    }
+    return total;
+}
+
+double TransactionModel::getTotalTransferOut() const {
+    double total = 0.0;
+    for (const Transaction& t : m_transactions) {
+        if (t.isTransferOut()) {
+            total += qAbs(t.amount);
         }
     }
     return total;

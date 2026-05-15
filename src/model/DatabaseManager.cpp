@@ -1,4 +1,5 @@
 #include "DatabaseManager.h"
+#include "Constants.h"
 #include <QStandardPaths>
 #include <QDir>
 
@@ -156,7 +157,10 @@ bool DatabaseManager::createTables() {
 
         insertCategory(QString::fromUtf8("其他支出"), 0);
 
-        insertCategory(QString::fromUtf8("转账"), 2, -1, QStringLiteral("transfer.svg"));
+        insertCategory(TransferCategory::TRANSFER, static_cast<int>(CategoryType::TRANSFER), -1, QStringLiteral("transfer.svg"));
+        catId = getLastInsertId();
+        insertCategory(TransferCategory::TRANSFER_IN, static_cast<int>(CategoryType::TRANSFER), catId, QStringLiteral("transfer.svg"));
+        insertCategory(TransferCategory::TRANSFER_OUT, static_cast<int>(CategoryType::TRANSFER), catId, QStringLiteral("transfer.svg"));
     }
 
     QSqlQuery checkAccounts = executeSelectQuery("SELECT COUNT(*) FROM accounts");
@@ -290,6 +294,20 @@ bool DatabaseManager::insertTransaction(int categoryId, int accountId, double am
     return q.exec();
 }
 
+bool DatabaseManager::insertTransaction(int categoryId, int accountId, double amount,
+                                       const QDate& date, const QString& note, int transferId) {
+    QSqlQuery q;
+    q.prepare("INSERT INTO transactions (category_id, account_id, amount, date, note, transfer_id) "
+              "VALUES (:category_id, :account_id, :amount, :date, :note, :transfer_id)");
+    q.bindValue(":category_id", categoryId);
+    q.bindValue(":account_id", accountId);
+    q.bindValue(":amount", amount);
+    q.bindValue(":date", date.toString(Qt::ISODate));
+    q.bindValue(":note", note);
+    q.bindValue(":transfer_id", transferId);
+    return q.exec();
+}
+
 bool DatabaseManager::updateTransaction(int id, int categoryId, int accountId, double amount,
                                        const QDate& date, const QString& note) {
     QSqlQuery q;
@@ -369,12 +387,14 @@ QSqlQuery DatabaseManager::getTransactionsByAccount(int accountId) {
 
 QSqlQuery DatabaseManager::getCategoryStatistics(const QDate& start, const QDate& end, int type) {
     QSqlQuery q;
-    q.prepare("SELECT COALESCE(p.name, c.name) as name, SUM(t.amount) as total "
+    q.prepare("SELECT "
+              "CASE WHEN c.type = 2 THEN c.name ELSE COALESCE(p.name, c.name) END as name, "
+              "CASE WHEN c.type = 2 THEN SUM(ABS(t.amount)) ELSE SUM(t.amount) END as total "
               "FROM transactions t "
               "JOIN categories c ON t.category_id = c.id "
               "LEFT JOIN categories p ON c.parent_id = p.id "
               "WHERE c.type = :type AND t.date >= :start AND t.date <= :end "
-              "GROUP BY COALESCE(c.parent_id, c.id), COALESCE(p.name, c.name) "
+              "GROUP BY CASE WHEN c.type = 2 THEN c.name ELSE COALESCE(p.name, c.name) END "
               "ORDER BY total DESC");
     q.bindValue(":type", type);
     q.bindValue(":start", start.toString(Qt::ISODate));
@@ -385,7 +405,8 @@ QSqlQuery DatabaseManager::getCategoryStatistics(const QDate& start, const QDate
 
 QSqlQuery DatabaseManager::getMonthlyStatistics(int year, int type) {
     QSqlQuery q;
-    q.prepare("SELECT strftime('%m', t.date) as month, SUM(t.amount) as total "
+    q.prepare("SELECT strftime('%m', t.date) as month, "
+              "CASE WHEN c.type = 2 THEN SUM(ABS(t.amount)) ELSE SUM(t.amount) END as total "
               "FROM transactions t JOIN categories c ON t.category_id = c.id "
               "WHERE c.type = :type AND strftime('%Y', t.date) = :year "
               "GROUP BY month ORDER BY month");
@@ -396,27 +417,71 @@ QSqlQuery DatabaseManager::getMonthlyStatistics(int year, int type) {
 }
 
 QSqlQuery DatabaseManager::getAccountBalance() {
-    return executeSelectQuery("SELECT a.name, "
-                             "COALESCE(SUM(CASE WHEN c.type = 1 THEN t.amount ELSE 0 END), 0) as income, "
-                             "COALESCE(SUM(CASE WHEN c.type = 0 THEN t.amount ELSE 0 END), 0) as expense "
-                             "FROM accounts a LEFT JOIN transactions t ON a.id = t.account_id "
-                             "LEFT JOIN categories c ON t.category_id = c.id "
-                             "GROUP BY a.id, a.name");
+    return executeSelectQuery(
+        "SELECT a.id, a.name, "
+        "COALESCE(SUM(CASE WHEN c.type = 1 THEN t.amount ELSE 0 END), 0) as income, "
+        "COALESCE(SUM(CASE WHEN c.type = 0 THEN t.amount ELSE 0 END), 0) as expense, "
+        "COALESCE(SUM(CASE WHEN c.type = 2 AND t.amount > 0 THEN t.amount ELSE 0 END), 0) as transfer_in, "
+        "COALESCE(SUM(CASE WHEN c.type = 2 AND t.amount < 0 THEN ABS(t.amount) ELSE 0 END), 0) as transfer_out "
+        "FROM accounts a LEFT JOIN transactions t ON a.id = t.account_id "
+        "LEFT JOIN categories c ON t.category_id = c.id "
+        "GROUP BY a.id, a.name");
 }
 
 double DatabaseManager::getAccountBalance(int accountId) {
     QSqlQuery q;
-    q.prepare("SELECT COALESCE(SUM(CASE WHEN c.type = 1 THEN t.amount ELSE 0 END), 0) - "
-              "COALESCE(SUM(CASE WHEN c.type = 0 THEN t.amount ELSE 0 END), 0) as balance "
-              "FROM accounts a LEFT JOIN transactions t ON a.id = t.account_id "
-              "LEFT JOIN categories c ON t.category_id = c.id "
-              "WHERE a.id = :account_id");
+    q.prepare("SELECT COALESCE(SUM("
+              "CASE WHEN c.type = 1 THEN t.amount "
+              "WHEN c.type = 0 THEN -t.amount "
+              "WHEN c.type = 2 THEN t.amount "
+              "ELSE 0 END), 0) as balance "
+              "FROM transactions t "
+              "JOIN categories c ON t.category_id = c.id "
+              "WHERE t.account_id = :account_id");
     q.bindValue(":account_id", accountId);
     q.exec();
     if (q.next()) {
         return q.value(0).toDouble();
     }
     return 0.0;
+}
+
+double DatabaseManager::getTotalAssets() {
+    QSqlQuery q = executeSelectQuery(
+        "SELECT COALESCE(SUM("
+        "CASE WHEN c.type = 1 THEN t.amount "
+        "WHEN c.type = 0 THEN -t.amount "
+        "WHEN c.type = 2 THEN t.amount "
+        "ELSE 0 END), 0) as total_assets "
+        "FROM transactions t "
+        "JOIN categories c ON t.category_id = c.id");
+    if (q.next()) {
+        return q.value(0).toDouble();
+    }
+    return 0.0;
+}
+
+bool DatabaseManager::deleteTransferPair(int transactionId) {
+    QSqlQuery q;
+    q.prepare("SELECT transfer_id FROM transactions WHERE id = :id");
+    q.bindValue(":id", transactionId);
+    q.exec();
+    int pairedId = -1;
+    if (q.next() && !q.value(0).isNull()) {
+        pairedId = q.value(0).toInt();
+    }
+
+    if (pairedId > 0) {
+        QSqlQuery delPaired;
+        delPaired.prepare("DELETE FROM transactions WHERE id = :id");
+        delPaired.bindValue(":id", pairedId);
+        delPaired.exec();
+    }
+
+    QSqlQuery delOrig;
+    delOrig.prepare("DELETE FROM transactions WHERE id = :id");
+    delOrig.bindValue(":id", transactionId);
+    return delOrig.exec();
 }
 
 bool DatabaseManager::updateAccountBalance(int accountId, double balance) {
@@ -435,6 +500,18 @@ int DatabaseManager::getLastInsertId() {
         return q.value(0).toInt();
     }
     return -1;
+}
+
+bool DatabaseManager::beginTransaction() {
+    return m_database.transaction();
+}
+
+bool DatabaseManager::commit() {
+    return m_database.commit();
+}
+
+bool DatabaseManager::rollback() {
+    return m_database.rollback();
 }
 
 bool DatabaseManager::migrateDatabase() {
@@ -461,11 +538,42 @@ bool DatabaseManager::migrateDatabase() {
         }
     }
 
+    QSqlQuery checkTransferId = executeSelectQuery(
+        QString("PRAGMA table_info(transactions)"));
+    bool hasTransferId = false;
+    while (checkTransferId.next()) {
+        if (checkTransferId.value("name").toString() == "transfer_id") {
+            hasTransferId = true;
+            break;
+        }
+    }
+    if (!hasTransferId) {
+        if (!executeQuery("ALTER TABLE transactions ADD COLUMN transfer_id INTEGER DEFAULT NULL")) {
+            return false;
+        }
+    }
+
     QSqlQuery checkTransfer = executeSelectQuery(
         QString("SELECT COUNT(*) FROM categories WHERE type = 2"));
     checkTransfer.next();
     if (checkTransfer.value(0).toInt() == 0) {
         insertCategory(QString::fromUtf8("转账"), 2, -1, QStringLiteral("transfer.svg"));
+        int transferId = getLastInsertId();
+        insertCategory(QString::fromUtf8("转入"), 2, transferId, QStringLiteral("transfer.svg"));
+        insertCategory(QString::fromUtf8("转出"), 2, transferId, QStringLiteral("transfer.svg"));
+    } else {
+        QSqlQuery checkSubTransfer = executeSelectQuery(
+            QString("SELECT COUNT(*) FROM categories WHERE type = 2 AND parent_id IS NOT NULL"));
+        checkSubTransfer.next();
+        if (checkSubTransfer.value(0).toInt() == 0) {
+            QSqlQuery getTransferId = executeSelectQuery(
+                QString("SELECT id FROM categories WHERE type = 2 AND parent_id IS NULL LIMIT 1"));
+            if (getTransferId.next()) {
+                int transferId = getTransferId.value(0).toInt();
+                insertCategory(QString::fromUtf8("转入"), 2, transferId, QStringLiteral("transfer.svg"));
+                insertCategory(QString::fromUtf8("转出"), 2, transferId, QStringLiteral("transfer.svg"));
+            }
+        }
     }
 
     return true;

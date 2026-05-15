@@ -1,6 +1,7 @@
 #include "TransferView.h"
 #include "../controller/TransactionController.h"
 #include "../model/DatabaseManager.h"
+#include "../model/Constants.h"
 #include <QMessageBox>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -116,7 +117,7 @@ void TransferView::onTransferClicked() {
 
     QString note = m_noteEdit->text().trimmed();
     if (note.isEmpty()) {
-        note = QStringLiteral("转账");
+        note = TransferCategory::TRANSFER;
     }
 
     bool success = TransactionController::transfer(fromAccountId, toAccountId, amount, m_dateEdit->date(), note);

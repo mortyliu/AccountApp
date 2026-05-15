@@ -39,6 +39,8 @@ public:
 
     bool insertTransaction(int categoryId, int accountId, double amount, 
                            const QDate& date, const QString& note = "");
+    bool insertTransaction(int categoryId, int accountId, double amount,
+                           const QDate& date, const QString& note, int transferId);
     bool updateTransaction(int id, int categoryId, int accountId, double amount,
                            const QDate& date, const QString& note);
     bool deleteTransaction(int id);
@@ -51,9 +53,15 @@ public:
     QSqlQuery getMonthlyStatistics(int year, int type);
     QSqlQuery getAccountBalance();
     double getAccountBalance(int accountId);
+    double getTotalAssets();
+    bool deleteTransferPair(int transactionId);
     bool updateAccountBalance(int accountId, double balance);
     QSqlDatabase getDatabase();
     int getLastInsertId();
+    
+    bool beginTransaction();
+    bool commit();
+    bool rollback();
 
 private:
     DatabaseManager();

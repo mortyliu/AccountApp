@@ -1,4 +1,4 @@
-﻿#ifndef ACCOUNTMODEL_H
+#ifndef ACCOUNTMODEL_H
 #define ACCOUNTMODEL_H
 
 #include <QAbstractTableModel>
@@ -10,6 +10,8 @@ struct Account {
     QString name;
     QString icon;
     double balance;
+    double inflow;
+    double outflow;
 };
 
 class AccountModel : public QAbstractTableModel {
@@ -29,6 +31,7 @@ public:
 
     QString getAccountName(int id);
     QList<Account> getAllAccounts();
+    double getTotalAssets();
 
 private:
     QList<Account> m_accounts;

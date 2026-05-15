@@ -1,4 +1,4 @@
-﻿#include "AccountModel.h"
+#include "AccountModel.h"
 #include "DatabaseManager.h"
 
 AccountModel::AccountModel(QObject* parent) : QAbstractTableModel(parent) {
@@ -12,7 +12,7 @@ int AccountModel::rowCount(const QModelIndex& parent) const {
 
 int AccountModel::columnCount(const QModelIndex& parent) const {
     Q_UNUSED(parent);
-    return 3;
+    return 5;
 }
 
 QVariant AccountModel::data(const QModelIndex& index, int role) const {
@@ -29,6 +29,10 @@ QVariant AccountModel::data(const QModelIndex& index, int role) const {
         case 1:
             return QVariant(account.name);
         case 2:
+            return QVariant(QString("%1").arg(account.inflow, 0, 'f', 2));
+        case 3:
+            return QVariant(QString("%1").arg(account.outflow, 0, 'f', 2));
+        case 4:
             return QVariant(QString("%1").arg(account.balance, 0, 'f', 2));
         }
     }
@@ -44,6 +48,10 @@ QVariant AccountModel::headerData(int section, Qt::Orientation orientation, int 
         case 1:
             return QVariant(QString::fromUtf8("名称"));
         case 2:
+            return QVariant(QString::fromUtf8("流入"));
+        case 3:
+            return QVariant(QString::fromUtf8("流出"));
+        case 4:
             return QVariant(QString::fromUtf8("余额"));
         }
     }
@@ -85,18 +93,24 @@ void AccountModel::refresh() {
         account.name = query.value("name").toString();
         account.icon = query.value("icon").toString();
         account.balance = 0.0;
+        account.inflow = 0.0;
+        account.outflow = 0.0;
         m_accounts.append(account);
     }
 
     QSqlQuery balanceQuery = DatabaseManager::instance().getAccountBalance();
     while (balanceQuery.next()) {
-        QString name = balanceQuery.value("name").toString();
+        int accId = balanceQuery.value("id").toInt();
         double income = balanceQuery.value("income").toDouble();
         double expense = balanceQuery.value("expense").toDouble();
-        
+        double transferIn = balanceQuery.value("transfer_in").toDouble();
+        double transferOut = balanceQuery.value("transfer_out").toDouble();
+
         for (Account& acc : m_accounts) {
-            if (acc.name == name) {
-                acc.balance = income - expense;
+            if (acc.id == accId) {
+                acc.inflow = income + transferIn;
+                acc.outflow = expense + transferOut;
+                acc.balance = acc.inflow - acc.outflow;
                 break;
             }
         }
@@ -116,4 +130,12 @@ QString AccountModel::getAccountName(int id) {
 
 QList<Account> AccountModel::getAllAccounts() {
     return m_accounts;
+}
+
+double AccountModel::getTotalAssets() {
+    double total = 0.0;
+    for (const Account& acc : m_accounts) {
+        total += acc.balance;
+    }
+    return total;
 }

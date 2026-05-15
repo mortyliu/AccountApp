@@ -60,8 +60,10 @@ void AccountView::setupUI() {
     m_tableView->setShowGrid(false);
     m_tableView->horizontalHeader()->setStretchLastSection(true);
     m_tableView->setColumnWidth(0, 60);
-    m_tableView->setColumnWidth(1, 200);
-    m_tableView->setColumnWidth(2, 120);
+    m_tableView->setColumnWidth(1, 120);
+    m_tableView->setColumnWidth(2, 100);
+    m_tableView->setColumnWidth(3, 100);
+    m_tableView->setColumnWidth(4, 100);
 
     mainLayout->addWidget(inputCard);
     mainLayout->addWidget(m_tableView, 1);

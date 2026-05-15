@@ -1,4 +1,5 @@
 #include "CategoryGridWidget.h"
+#include "../model/Constants.h"
 #include <QMouseEvent>
 #include <QEnterEvent>
 #include <QPainter>
@@ -154,7 +155,7 @@ void CategoryGridWidget::setupHeader() {
     m_tabLayout = new QHBoxLayout();
     m_tabLayout->setSpacing(0);
 
-    QStringList tabNames = {QStringLiteral("支出"), QStringLiteral("收入"), QStringLiteral("转账")};
+    QStringList tabNames = {QStringLiteral("支出"), QStringLiteral("收入"), TransferCategory::TRANSFER};
     for (int i = 0; i < tabNames.size(); ++i) {
         QPushButton* tab = new QPushButton(tabNames[i]);
         tab->setCheckable(true);
@@ -383,7 +384,7 @@ void CategoryGridWidget::clearSelection() {
 
 QString CategoryGridWidget::getDefaultIcon(const QString& categoryName) {
     static QMap<QString, QString> iconMap = {
-        {QStringLiteral("转账"), QStringLiteral("transfer")},
+        {TransferCategory::TRANSFER, QStringLiteral("transfer")},
         {QStringLiteral("餐饮"), QStringLiteral("cat_food")},
         {QStringLiteral("交通"), QStringLiteral("cat_transport")},
         {QStringLiteral("购物"), QStringLiteral("cat_shopping")},

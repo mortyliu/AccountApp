@@ -1,8 +1,8 @@
 #include "TransactionView.h"
-#include "../model/TransactionModel.h"
 #include "../model/CategoryModel.h"
 #include "../model/AccountModel.h"
 #include "../controller/TransactionController.h"
+#include "../model/Constants.h"
 #include "../utils/CsvExporter.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -59,16 +59,28 @@ void TransactionView::setupUI() {
     balanceCard->setObjectName("cardFrame");
     QVBoxLayout* balanceLayout = new QVBoxLayout(balanceCard);
     balanceLayout->setContentsMargins(20, 16, 20, 16);
-    QLabel* balanceTitle = new QLabel(QStringLiteral("结余"));
+    QLabel* balanceTitle = new QLabel(QStringLiteral("净结余"));
     balanceTitle->setObjectName("cardTitle");
     m_balanceLabel = new QLabel(QStringLiteral("0.00"));
     m_balanceLabel->setObjectName("cardValue");
     balanceLayout->addWidget(balanceTitle);
     balanceLayout->addWidget(m_balanceLabel);
 
+    QFrame* assetsCard = new QFrame();
+    assetsCard->setObjectName("cardFrame");
+    QVBoxLayout* assetsLayout = new QVBoxLayout(assetsCard);
+    assetsLayout->setContentsMargins(20, 16, 20, 16);
+    QLabel* assetsTitle = new QLabel(QStringLiteral("总资产"));
+    assetsTitle->setObjectName("cardTitle");
+    m_assetsLabel = new QLabel(QStringLiteral("0.00"));
+    m_assetsLabel->setObjectName("cardValue");
+    assetsLayout->addWidget(assetsTitle);
+    assetsLayout->addWidget(m_assetsLabel);
+
     summaryLayout->addWidget(incomeCard);
     summaryLayout->addWidget(expenseCard);
     summaryLayout->addWidget(balanceCard);
+    summaryLayout->addWidget(assetsCard);
 
     QFrame* inputCard = new QFrame();
     inputCard->setObjectName("cardFrame");
@@ -246,9 +258,13 @@ void TransactionView::updateSummary() {
     double expense = m_controller.getTotalExpense();
     double balance = income - expense;
 
+    m_accountModel->refresh();
+    double totalAssets = m_accountModel->getTotalAssets();
+
     m_incomeLabel->setText(QStringLiteral("¥ %1").arg(income, 0, 'f', 2));
     m_expenseLabel->setText(QStringLiteral("¥ %1").arg(expense, 0, 'f', 2));
     m_balanceLabel->setText(QStringLiteral("¥ %1").arg(balance, 0, 'f', 2));
+    m_assetsLabel->setText(QStringLiteral("¥ %1").arg(totalAssets, 0, 'f', 2));
 }
 
 void TransactionView::refreshData() {
@@ -293,6 +309,11 @@ void TransactionView::onAddClicked() {
         return;
     }
 
+    Category cat = m_categoryModel->getCategoryById(categoryId);
+    if (cat.type == static_cast<int>(CategoryType::TRANSFER) && cat.name == TransferCategory::TRANSFER_OUT) {
+        amount = -amount;
+    }
+
     int accountId = m_accountCombo->currentData().toInt();
     QDate date = m_dateEdit->date();
     QString note = m_noteEdit->text().trimmed();
@@ -314,6 +335,11 @@ void TransactionView::onEditClicked() {
     }
 
     int categoryId = getSelectedCategoryId();
+    Category cat = m_categoryModel->getCategoryById(categoryId);
+    if (cat.type == static_cast<int>(CategoryType::TRANSFER) && cat.name == TransferCategory::TRANSFER_OUT) {
+        amount = -amount;
+    }
+
     int accountId = m_accountCombo->currentData().toInt();
     QDate date = m_dateEdit->date();
     QString note = m_noteEdit->text().trimmed();
@@ -332,7 +358,25 @@ void TransactionView::onEditClicked() {
 
 void TransactionView::onDeleteClicked() {
     if (QMessageBox::question(this, QStringLiteral("确认"), QStringLiteral("确定要删除该记录吗？")) == QMessageBox::Yes) {
-        if (m_controller.deleteTransaction(m_editId)) {
+        bool success = false;
+        TransactionModel* model = m_controller.getModel();
+        for (int i = 0; i < model->rowCount(); ++i) {
+            QModelIndex idx = model->index(i, 0);
+            if (idx.data(Qt::UserRole).toInt() == m_editId) {
+                int row = idx.row();
+                Transaction t = model->getTransactions()[row];
+                if (t.transferId > 0) {
+                    success = m_controller.deleteTransactionWithTransferPair(m_editId);
+                } else {
+                    success = m_controller.deleteTransaction(m_editId);
+                }
+                break;
+            }
+        }
+        if (!success) {
+            success = m_controller.deleteTransaction(m_editId);
+        }
+        if (success) {
             m_amountEdit->clear();
             m_noteEdit->clear();
             m_editBtn->setEnabled(false);
@@ -368,8 +412,8 @@ void TransactionView::onTableDoubleClicked(const QModelIndex& index) {
 
     if (targetCategoryId < 0) {
         int searchType = 0;
-        if (typeStr == QStringLiteral("收入")) searchType = 1;
-        else if (typeStr == QStringLiteral("转账")) searchType = 2;
+        if (typeStr == QStringLiteral("收入")) searchType = static_cast<int>(CategoryType::INCOME);
+        else if (typeStr == TransferCategory::TRANSFER) searchType = static_cast<int>(CategoryType::TRANSFER);
         for (const Category& c : m_categoryModel->getCategoriesByType(searchType)) {
             if (m_categoryModel->getFullCategoryName(c.id) == categoryName || c.name == categoryName) {
                 targetCategoryId = c.id;

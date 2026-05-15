@@ -5,6 +5,7 @@
 #include <QSqlQuery>
 #include <QList>
 #include <QDate>
+#include "Constants.h"
 
 struct Transaction {
     int id;
@@ -18,8 +19,20 @@ struct Transaction {
     double amount;
     QDate date;
     QString note;
+    int transferId;
+
+    bool isTransferOut() const {
+        return categoryType == static_cast<int>(CategoryType::TRANSFER) && categoryName == TransferCategory::TRANSFER_OUT;
+    }
+
+    bool isTransferIn() const {
+        return categoryType == static_cast<int>(CategoryType::TRANSFER) && categoryName == TransferCategory::TRANSFER_IN;
+    }
 
     QString fullCategoryName() const {
+        if (!parentCategoryName.isEmpty() && categoryType == static_cast<int>(CategoryType::TRANSFER)) {
+            return categoryName;
+        }
         if (!parentCategoryName.isEmpty()) {
             return parentCategoryName + "-" + categoryName;
         }
@@ -51,6 +64,10 @@ public:
     double getTotalIncome() const;
     double getTotalExpense() const;
     double getTotalTransfer() const;
+    double getTotalTransferIn() const;
+    double getTotalTransferOut() const;
+
+    const QList<Transaction>& getTransactions() const { return m_transactions; }
 
 private:
     QList<Transaction> m_transactions;
